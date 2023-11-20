@@ -24,12 +24,12 @@ class Menu(QMainWindow):
         self.page2 = QWidget()  # 創建一個新的 QWidget 實例
         self.tab_widget.addTab(self.page2, "Light_Source_BLU")
 
-        self.page2_table = Light_Source_BLU_Table()
+        # self.page2_table = Light_Source_BLU_Table()
         self.page2_button = Light_Source_BLU_button()
 
         self.page2_layout = QVBoxLayout()
         self.page2_layout.addWidget(self.page2_button)
-        self.page2_layout.addWidget(self.page2_table)
+        # self.page2_layout.addWidget(self.page2_table)
 
         # 將 page2_layout 設置為 page2 的佈局
         self.page2.setLayout(self.page2_layout)
@@ -45,5 +45,5 @@ class Menu(QMainWindow):
         # 添加选项卡窗口到主窗口
         self.setCentralWidget(self.tab_widget)
 
-        # Set Background
-        self.setStyleSheet("background-color: #F5F5DC;")
+        # # Set Background
+        # self.setStyleSheet("background-color: #F5F5DC;")
