@@ -1,8 +1,9 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QGridLayout, \
     QFormLayout, QLineEdit, QTabWidget, QTableWidgetItem, QTableWidget, QSizePolicy, QFrame, \
     QPushButton, QAbstractItemView,QComboBox,QPushButton,QCheckBox,QDialog,QFileDialog,QMessageBox,\
-    QInputDialog
-from PySide6.QtGui import QKeyEvent,QColor,QPalette,QStandardItem
+    QInputDialog,QHeaderView
+
+from PySide6.QtGui import QKeyEvent,QColor,QPalette,QStandardItem,QKeySequence,QShortcut
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
 from PySide6.QtCharts import QChart
@@ -14,6 +15,29 @@ import chardet
 import openpyxl
 import pandas as pd
 
+class EditableHeader(QHeaderView):
+    def __init__(self, orientation, parent):
+        super().__init__(orientation, parent)
+        self.setSectionsMovable(True)
+        self.setSectionsClickable(True)
+
+        # 添加 QLineEdit 來實現編輯功能
+        self.edit_line = QLineEdit(self)
+        self.edit_line.hide()
+        self.edit_line.returnPressed.connect(self.commitEdit)
+
+    def mouseDoubleClickEvent(self, event):
+        index = self.logicalIndexAt(event.pos())
+        self.edit_line.setGeometry(self.sectionViewportPosition(index), 0, self.sectionSize(index), self.height())
+        self.edit_line.setText(self.model().headerData(index, self.orientation()))
+        self.edit_line.show()
+        self.edit_line.setFocus()
+
+    def commitEdit(self):
+        index = self.logicalIndexAt(self.edit_line.pos())
+        self.model().setHeaderData(index, self.orientation(), self.edit_line.text())
+        self.edit_line.hide()
+
 class Light_Source_BLU_button(QWidget):
     def __init__(self):
         super().__init__()
@@ -24,6 +48,12 @@ class Light_Source_BLU_button(QWidget):
         # self.table.setHorizontalHeaderLabels(["波長", "項目"])
         # 添加初始的行
         self.table.setRowCount(500)
+        # 使用自定義的表頭
+        self.table.setHorizontalHeader(EditableHeader(self.table.horizontalHeader().orientation(), self.table))
+
+        # 建立 QShortcut 以處理 Delete 鍵
+        self.delete_shortcut = QShortcut("Delete", self)
+        self.delete_shortcut.activated.connect(self.deleteSelectedCells)
 
         # # 設定默認值
         # for row, i in enumerate(range(380,800)):
@@ -31,18 +61,23 @@ class Light_Source_BLU_button(QWidget):
         #     item.setBackground(QColor(173, 216, 230))  # 設置背景顏色為淺藍色
         #     item.setTextAlignment(Qt.AlignCenter)  # 設置文本居中對齊
         #     self.table.setItem(row, 0, item)
-        self.import_data_button = QPushButton("Import_data")
-        self.export_data_button = QPushButton("Export_data")
+        self.import_data_button = QPushButton("Import_excel")
+        self.export_data_button = QPushButton("Export_excel")
         self.add_column_button = QPushButton("Add_column")
-        self.create_data_button = QPushButton("Create_db")
+        self.create_data_button = QPushButton("Create_Table")
+        # SelectQcombobox
+        self.select_db_table = QComboBox()
+        self.updateTableComboBox()  # 初始化時更新 ComboBox 選項
+        self.select_db_table.currentIndexChanged.connect(self.tableSelectionChanged)
 
 
         self.Light_Source_BLU_button_layout = QGridLayout()
         self.Light_Source_BLU_button_layout.addWidget(self.import_data_button,0,0)
         self.Light_Source_BLU_button_layout.addWidget(self.export_data_button,0,1)
-        self.Light_Source_BLU_button_layout.addWidget(self.add_column_button,1,0)
-        self.Light_Source_BLU_button_layout.addWidget(self.create_data_button,1,1)
-        self.Light_Source_BLU_button_layout .addWidget(self.table,2,0,1,2)
+        self.Light_Source_BLU_button_layout.addWidget(self.add_column_button,0,2)
+        self.Light_Source_BLU_button_layout.addWidget(self.create_data_button,1,0)
+        self.Light_Source_BLU_button_layout.addWidget(self.select_db_table,1,1)
+        self.Light_Source_BLU_button_layout .addWidget(self.table,2,0,1,3)
 
         self.setLayout(self.Light_Source_BLU_button_layout)
 
@@ -83,10 +118,11 @@ class Light_Source_BLU_button(QWidget):
 
         for value_tuple in list_values[1:]:
             print(value_tuple)
-            col_index = 0
-            for value in value_tuple:
-                self.table.setItem(row_index,col_index,QTableWidgetItem(str(value)))
-                col_index += 1
+            if len(value_tuple) <= self.table.columnCount():  # 檢查欄數是否超過預期
+                col_index = 0
+                for value in value_tuple:
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+                    col_index += 1
             row_index += 1
         # # 創建或連接到 SQLite 資料庫
         # db_path = "blu_database.db"
@@ -125,18 +161,23 @@ class Light_Source_BLU_button(QWidget):
         # 取得表格的標題
         header_items = [self.table.horizontalHeaderItem(i).text() if self.table.horizontalHeaderItem(
             i) is not None else f'Column{i}' for i in range(self.table.columnCount())]
+
+        # 檢查標題是否唯一
+        if len(set(header_items)) != len(header_items):
+            # 如果有重複，可以自行處理，例如在重複的標題後面加上編號
+            header_items = [f'{header}_{i}' for i, header in enumerate(header_items)]
+
         header_str = ', '.join(f'"{header}" TEXT' for header in header_items)
 
-        # 使用者輸入的 table name 創建資料表
-        cursor.execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({header_str});')
+        # 創建資料表
+        cursor.execute(f'CREATE TABLE IF NOT EXISTS "{table_name}" ({header_str});')
 
         # 匯入資料
         for row in range(self.table.rowCount()):
             row_values = [self.table.item(row, col).text() if self.table.item(row, col) is not None else '' for col in
                           range(self.table.columnCount())]
             placeholder = ', '.join('?' for _ in row_values)
-            # 使用者輸入的 table name 匯入資料
-            cursor.execute(f"INSERT INTO {table_name} VALUES ({placeholder});", row_values)
+            cursor.execute(f'INSERT INTO "{table_name}" VALUES ({placeholder});', row_values)
 
         # 提交變更
         conn.commit()
@@ -229,28 +270,36 @@ class Light_Source_BLU_button(QWidget):
             QApplication.clipboard().setText(copy_text)
 
         if event.key() == Qt.Key_V and (event.modifiers() & Qt.KeyboardModifier.ControlModifier):
-            clipboard_text = QApplication.clipboard().text()
-            rows = clipboard_text.split('\n')[:-1]
+            selection = self.table.selectedIndexes()
+            if selection:
+                row_anchor = selection[0].row()
+                column_anchor = selection[0].column()
 
-            if len(rows) == 0:
-                return
+                clipboard = QApplication.clipboard()
+                rows = clipboard.text().split('\n')
+                for index_row, row in enumerate(rows):
+                    values = row.split('\t')
+                    for index_col ,value in enumerate(values):
+                        item = QTableWidgetItem(value)
+                        self.table.setItem(row_anchor + index_row , column_anchor + index_col, item)
+            super().keyPressEvent()
 
-            # 檢查貼上的資料是否符合表格的大小
-            if len(rows) != self.table.rowCount() or len(rows[0].split('\t')) != self.table.columnCount():
-                QMessageBox.information(None, 'Error', 'The pasted data does not contain the correct data')
-                return
+    def deleteSelectedCells(self):
+        # 獲取選擇的儲存格範圍
+        selected_ranges = self.table.selectedRanges()
 
-            # 更新表格
-            for i, row in enumerate(rows):
-                row = row.split('\t')
-                for j, value in enumerate(row):
-                    item = QTableWidgetItem(value)
-                    self.table.setItem(i, j, item)
+        # 刪除選擇的儲存格內容
+        for selected_range in selected_ranges:
+            for row in range(selected_range.topRow(), selected_range.bottomRow() + 1):
+                for column in range(selected_range.leftColumn(), selected_range.rightColumn() + 1):
+                    item = self.table.item(row, column)
+                    if item is not None:
+                        item.setText("")  # 可以根據需要進行其他操作
+
 
     def LoadDataBase(self):
         connection = sqlite3.connect("blu_database.db")
         cursor = connection.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='blu_data';")
         # 確保表格存在
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='blu_data';")
         if cursor.fetchone() is None:
@@ -269,6 +318,67 @@ class Light_Source_BLU_button(QWidget):
 
         # 獲取表格數據
         result = connection.execute("SELECT * FROM blu_data")
+
+        for row_number, row_data in enumerate(result):
+            self.table.insertRow(row_number)
+            print("row_number", row_number)
+            for column_number, data in enumerate(row_data):
+                # print("column number", column_number)
+                # print("row data", row_data)
+                self.table.setItem(row_number, column_number, QTableWidgetItem(str(data)))
+            print("row data", row_data)
+        connection.commit()
+        connection.close()
+
+    def updateTableComboBox(self):
+        # 更新 ComboBox 的選項
+        # 在需要更新 ComboBox 的地方呼叫這個函數
+        # 例如，當你新增了新的 table 時，呼叫 updateTableComboBox() 以更新 ComboBox
+        # 連接到 SQLite 資料庫
+        conn = sqlite3.connect("blu_database.db")
+        cursor = conn.cursor()
+
+        # 取得所有的 table 名稱
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+
+        # 更新 ComboBox 的選項
+        self.select_db_table.clear()
+        for table in tables:
+            self.select_db_table.addItem(table[0])
+
+        # 關閉連線
+        conn.close()
+
+    def tableSelectionChanged(self):
+        # 當 QComboBox 選擇變更時觸發的函數
+        selected_table = self.select_db_table.currentText()
+        if selected_table:
+            # 在這裡加入相應的操作，例如從選擇的資料表中擷取資料並更新到 widget_table
+            self.loadTableData(selected_table)
+
+    def loadTableData(self, table_name):
+        # 在這裡加入載入資料的程式碼，將選擇的資料表的內容更新到 widget_table
+        connection = sqlite3.connect("blu_database.db")
+        cursor = connection.cursor()
+        # 確保表格存在
+        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';")
+        if cursor.fetchone() is None:
+            connection.close()
+            return  # 如果表格不存在，直接返回
+
+        # 獲取表格的標題
+        cursor.execute(f"PRAGMA table_info({table_name});")
+        header_data = cursor.fetchall()
+        header_labels = [column[1] for column in header_data]
+
+        # 設置表格的列數和標題
+        self.table.setRowCount(0)  # 先清空表格
+        self.table.setColumnCount(len(header_labels))
+        self.table.setHorizontalHeaderLabels(header_labels)
+
+        # 獲取表格數據
+        result = connection.execute(f"SELECT * FROM '{table_name}'")  # 注意這裡使用單引號將表格名稱括起來
 
         for row_number, row_data in enumerate(result):
             self.table.insertRow(row_number)
