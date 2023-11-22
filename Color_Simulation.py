@@ -1,13 +1,15 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QGridLayout, \
     QFormLayout, QLineEdit, QTabWidget, QTableWidgetItem, QTableWidget, QSizePolicy, QFrame, \
-    QPushButton, QAbstractItemView,QComboBox,QPushButton,QCheckBox
-from PySide6.QtGui import QKeyEvent,QColor,QPalette
+    QPushButton, QAbstractItemView, QComboBox, QPushButton, QCheckBox
+from PySide6.QtGui import QKeyEvent, QColor, QPalette
 from PySide6.QtCore import Qt
 from PySide6.QtCharts import QChart
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sqlite3
 from Setting import *
+from Light_Source_BLU import *
+
 
 class Color_Simulation(QWidget):
     def __init__(self):
@@ -18,7 +20,6 @@ class Color_Simulation(QWidget):
         color_enter = Color_Enter()
         color_select = Color_Select()
 
-
         # layout
         Color_Simulation_layout = QVBoxLayout()
         Color_Simulation_layout.addWidget(color_result_table)
@@ -26,21 +27,22 @@ class Color_Simulation(QWidget):
         Color_Simulation_layout.addWidget(color_select)
 
         # 在 Color_Simulation_layout 中，設置行列的伸展因子(空白的間距)
-        Color_Simulation_layout.setStretch(0, 1)   # 第一行伸展因子為1
+        Color_Simulation_layout.setStretch(0, 1)  # 第一行伸展因子為1
         Color_Simulation_layout.setStretch(1, 2)  # 第二行伸展因子为2
         Color_Simulation_layout.setStretch(2, 1)  # 第三行伸展因子为1
 
         # 放置latout
         self.setLayout(Color_Simulation_layout)
 
+
 class Color_Result_Table(QTableWidget):
     def __init__(self):
         super().__init__()
 
         self.setColumnCount(16)
-        self.setHorizontalHeaderLabels(["項目", "Light", "背光名稱","背光名稱", "CF/T","R-CF 名稱",
-                                        "厚度","CF/T", "G-CF名稱", "厚度", "CF/T", "B-CF名稱",
-                                        "厚度", "NTSC%","BLU","BLU"])
+        self.setHorizontalHeaderLabels(["項目", "Light", "背光名稱", "背光名稱", "CF/T", "R-CF 名稱",
+                                        "厚度", "CF/T", "G-CF名稱", "厚度", "CF/T", "B-CF名稱",
+                                        "厚度", "NTSC%", "BLU", "BLU"])
         # 添加初始的行
         self.setRowCount(3)
 
@@ -65,7 +67,6 @@ class Color_Result_Table(QTableWidget):
                     if item:
                         item.setBackground(color)
 
-
         # 設置表格可編輯
         self.setEditTriggers(QTableWidget.DoubleClicked | QTableWidget.SelectedClicked)
 
@@ -73,17 +74,19 @@ class Color_Result_Table(QTableWidget):
         self.setStyleSheet("background-color: lightblue;")
 
 
-
 class Color_Enter(QWidget):
     def __init__(self):
         super().__init__()
+
+        # 實例化
+        self.classlightsource = Light_Source_BLU()
 
         # 總Layout
         self.Color_Enter_layout = QGridLayout()
 
         # Light source區域---------------------------
         self.light_source_mode = QComboBox()
-        light_source_mode_box_items = ["未選","自訂","模擬","替換"]
+        light_source_mode_box_items = ["未選", "自訂", "模擬", "替換"]
         for item in light_source_mode_box_items:
             self.light_source_mode.addItem(str(item))
         # 設定當前選中項目的文字顏色
@@ -91,9 +94,12 @@ class Color_Enter(QWidget):
         # self.light_source_box.setBackgroundRole(QPalette.Window)
 
         self.light_source = QComboBox()
-        light_source_box_items = ["待定"]
-        for item in light_source_box_items:
-            self.light_source.addItem(str(item))
+        # 连接到信号，当 Light_Source_BLU 类的表格选择变更时调用 updateLightSourceComboBox 方法
+        self.classlightsource.tableHeaderChanged.connect(self.updateLightSourceComboBox)
+
+        # 初始时更新 Light_Source ComboBox 的选项
+        self.updateLightSourceComboBox()
+
         # 設定當前選中項目的文字顏色
         self.light_source.setStyleSheet(QCOMBOXSETTING)
 
@@ -205,9 +211,9 @@ class Color_Enter(QWidget):
         self.R_fix_mode = QComboBox()
         R_fix_mode_items = ["未選", "自訂", "模擬"]
         for item in R_fix_mode_items:
-            self.R_fix_mode .addItem(str(item))
+            self.R_fix_mode.addItem(str(item))
         # 設定當前選中項目的文字顏色
-        self.R_fix_mode .setStyleSheet(QCOMBOXMODESETTING)
+        self.R_fix_mode.setStyleSheet(QCOMBOXMODESETTING)
         self.R_fix_label = QLabel("R-CF-Fix")
         self.R_fix_box = QComboBox()
         R_fix_box_items = ["未選"]
@@ -217,7 +223,7 @@ class Color_Enter(QWidget):
         self.R_fix_box.setStyleSheet(QCOMBOXSETTING)
         self.R_TK_edit_label = QLabel("R-Fix-TK")
         self.R_TK_edit = QLineEdit()
-        self.R_TK_edit.setFixedSize(100,25)
+        self.R_TK_edit.setFixedSize(100, 25)
         # G-Fix
         self.G_fix_mode = QComboBox()
         G_fix_mode_items = ["未選", "自訂", "模擬"]
@@ -380,7 +386,6 @@ class Color_Enter(QWidget):
         # 設置游標樣式
         self.calculate.setCursor(Qt.PointingHandCursor)  # 手指形狀
 
-
         # widget放置
         # Light source區域---------------------------------------
         self.Color_Enter_layout.addWidget(self.label_source, 0, 1, 1, 2)
@@ -394,10 +399,10 @@ class Color_Enter(QWidget):
         # Layer區域---------------------------------------------------
         self.Color_Enter_layout.addWidget(self.layer1_mode, 3, 0)
         self.Color_Enter_layout.addWidget(self.layer1_box, 3, 1, 1, 2)
-        self.Color_Enter_layout.addWidget(self.label_layer1, 2, 0, 1, 3)# 佔兩欄
+        self.Color_Enter_layout.addWidget(self.label_layer1, 2, 0, 1, 3)  # 佔兩欄
 
         self.Color_Enter_layout.addWidget(self.layer2_mode, 3, 3)
-        self.Color_Enter_layout.addWidget(self.layer2_box, 3, 4, 1,2)
+        self.Color_Enter_layout.addWidget(self.layer2_box, 3, 4, 1, 2)
         self.Color_Enter_layout.addWidget(self.label_layer2, 2, 3, 1, 3)
 
         self.Color_Enter_layout.addWidget(self.layer3_mode, 3, 6)
@@ -476,25 +481,28 @@ class Color_Enter(QWidget):
         self.Color_Enter_layout.addWidget(self.B_set_TK_edit_label, 10, 8)
         self.Color_Enter_layout.addWidget(self.B_set_TK_edit, 11, 8)
 
-
         # layout放置
         self.setLayout(self.Color_Enter_layout)
 
         # Set Background
         self.setStyleSheet("background-color: lightyellow;")
 
-    # def update_text_color(self):
-    #     selected_index = self.light_source_box.currentIndex()
-    #     if selected_index == 0:  # "未選"
-    #         color = "black"  # 選擇黑色文字
-    #     elif selected_index == 1:  # "自訂"
-    #         color = "red"  # 選擇紅色文字
-    #     elif selected_index == 2:  # "模擬"
-    #         color = "green"  # 選擇綠色文字
-    #     elif selected_index == 3:  # "替換"
-    #         color = "blue"  # 選擇藍色文字
-    #     # 設定樣式表來改變QComboBox內的文字顏色
-    #     self.light_source_box.setStyleSheet(f"QComboBox::item {{ color: {color}; }}")
+    def updateLightSourceComboBox(self):
+        print("OK")
+
+        # 當 Light_Source_BLU 类的表格选择变更时调用,select_db_table是Light_Source_BLU的combobox選項
+        selected_table = self.classlightsource.select_db_table.currentText()
+        if selected_table:
+            # 獲取 BLUspectrum 的表头选项
+            header_items = self.classlightsource.getTableHeader(table_name=selected_table)
+
+            # 清空 light_source 的选项
+            self.light_source.clear()
+
+            # 将获取的表头选项添加到 light_source 中
+            for item in header_items:
+                self.light_source.addItem(str(item))
+                print("item", str(item))
 
 
 class Color_Select(QWidget):
@@ -585,7 +593,6 @@ class Color_Select(QWidget):
 
         # layout放置
         self.setLayout(self.Color_Select_layout)
-
 
         # Set Background
         self.setStyleSheet("background-color: #FFBD9D;")
