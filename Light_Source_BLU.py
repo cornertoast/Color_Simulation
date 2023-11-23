@@ -41,12 +41,14 @@ class EditableHeader(QHeaderView):
         self.edit_line.hide()
 
 class Light_Source_BLU(QWidget):
-    # 定義一個信號，傳遞標題列表
-    tableHeaderChanged = Signal(list)
-    def __init__(self):
+    def __init__(self, update_table_header_callback=None):
         super().__init__()
 
+        # 將回調函數存儲為實例變數
+        self.update_table_header_callback = update_table_header_callback
 
+        # 添加調試語句
+        print("Callback function set:", self.update_table_header_callback)
 
         # 實例化
         self.table = QTableWidget()
@@ -75,6 +77,7 @@ class Light_Source_BLU(QWidget):
         self.select_db_table = QComboBox()
         self.updateTableComboBox()  # 初始化時更新 ComboBox 選項
         self.select_db_table.currentIndexChanged.connect(self.tableSelectionChanged)
+
 
 
 
@@ -371,6 +374,14 @@ class Light_Source_BLU(QWidget):
             # 在這裡加入相應的操作，例如從選擇的資料表中擷取資料並更新到 widget_table
 
             self.loadTableData(selected_table)
+            # 檢查是否進入這個分支
+            print("Entered tableSelectionChanged branch")  # 添加這行語句
+            # 調用回調函數，通知表頭發生變化
+            if self.update_table_header_callback:
+                print("Callback function exists")  # 添加這行語句
+                self.update_table_header_callback(header_labels)
+            else:
+                print("Callback function is None")  # 添加這行語句
 
     def loadTableData(self, table_name):
         # 在這裡加入載入資料的程式碼，將選擇的資料表的內容更新到 widget_table
@@ -419,6 +430,11 @@ class Light_Source_BLU(QWidget):
 
         # 關閉連線
         connection.close()
-
+        # 調用回調函數，通知表頭發生變化
+        if self.update_table_header_callback:
+            self.update_table_header_callback(header_labels)
+            print("在這裡")
+        print("Hello")
 
         return header_labels
+

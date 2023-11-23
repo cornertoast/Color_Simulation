@@ -79,7 +79,7 @@ class Color_Enter(QWidget):
         super().__init__()
 
         # 實例化
-        self.classlightsource = Light_Source_BLU()
+        self.classlightsource = Light_Source_BLU(self.updateLightSourceComboBox)
 
         # 總Layout
         self.Color_Enter_layout = QGridLayout()
@@ -94,12 +94,14 @@ class Color_Enter(QWidget):
         # self.light_source_box.setBackgroundRole(QPalette.Window)
 
         self.light_source = QComboBox()
-        # 连接到信号，当 Light_Source_BLU 类的表格选择变更时调用 updateLightSourceComboBox 方法
-        self.classlightsource.tableHeaderChanged.connect(self.updateLightSourceComboBox)
+
+
 
         # 初始时更新 Light_Source ComboBox 的选项
-        self.updateLightSourceComboBox()
+        self.updateLightSourceComboBox(self.classlightsource.getTableHeader(table_name='blu_data'))
 
+        # 连接到信号，当 Light_Source_BLU 类的表格选择变更时调用 updateLightSourceComboBox 方法
+        self.light_source.currentIndexChanged.connect(self.updateLightSourceComboBox)
         # 設定當前選中項目的文字顏色
         self.light_source.setStyleSheet(QCOMBOXSETTING)
 
@@ -487,20 +489,28 @@ class Color_Enter(QWidget):
         # Set Background
         self.setStyleSheet("background-color: lightyellow;")
 
-    def updateLightSourceComboBox(self):
-        print("OK")
+    def updateLightSourceComboBox(self, header_labels):
+        print(type(header_labels))  # 添加這行
+        print(header_labels)
+        # 在這裡定義 last_header_labels
+        # if not hasattr(self, 'last_header_labels'):
+        #     self.last_header_labels = None
+        #
+        # print("Header Labels Updated:", header_labels)
+        #
+        # # 檢查是否有回調函數以及表頭是否有變化
+        # if header_labels and header_labels != self.last_header_labels:
+        #     # 更新 last_header_labels
+        #     self.last_header_labels = header_labels
 
-        # 當 Light_Source_BLU 类的表格选择变更时调用,select_db_table是Light_Source_BLU的combobox選項
+            # 當 Light_Source_BLU 类的表格选择变更時调用,select_db_table是Light_Source_BLU的combobox選項
         selected_table = self.classlightsource.select_db_table.currentText()
         if selected_table:
-            # 獲取 BLUspectrum 的表头选项
-            header_items = self.classlightsource.getTableHeader(table_name=selected_table)
-
             # 清空 light_source 的选项
             self.light_source.clear()
 
-            # 将获取的表头选项添加到 light_source 中
-            for item in header_items:
+            # 將獲取的表頭選項添加到 light_source 中
+            for item in header_labels:
                 self.light_source.addItem(str(item))
                 print("item", str(item))
 
