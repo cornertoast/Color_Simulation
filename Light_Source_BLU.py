@@ -41,14 +41,14 @@ class EditableHeader(QHeaderView):
         self.edit_line.hide()
 
 class Light_Source_BLU(QWidget):
-    def __init__(self, update_table_header_callback=None):
+    def __init__(self):
         super().__init__()
 
-        # 將回調函數存儲為實例變數
-        self.update_table_header_callback = update_table_header_callback
+        # # 將回調函數存儲為實例變數
+        # self.update_table_header_callback = update_table_header_callback
 
-        # 添加調試語句
-        print("Callback function set:", self.update_table_header_callback)
+        # # 添加調試語句
+        # print("Callback function set:", self.update_table_header_callback)
 
         # 實例化
         self.table = QTableWidget()
@@ -73,6 +73,7 @@ class Light_Source_BLU(QWidget):
         self.export_data_button = QPushButton("Export_excel")
         self.add_column_button = QPushButton("Add_column")
         self.create_data_button = QPushButton("Create_Table")
+        self.save_table_name_button = QPushButton("Save_table")
         # SelectQcombobox
         self.select_db_table = QComboBox()
         self.updateTableComboBox()  # 初始化時更新 ComboBox 選項
@@ -87,6 +88,7 @@ class Light_Source_BLU(QWidget):
         self.Light_Source_BLU_button_layout.addWidget(self.add_column_button,0,2)
         self.Light_Source_BLU_button_layout.addWidget(self.create_data_button,1,0)
         self.Light_Source_BLU_button_layout.addWidget(self.select_db_table,1,1)
+        self.Light_Source_BLU_button_layout.addWidget(self.save_table_name_button,1,2)
         self.Light_Source_BLU_button_layout .addWidget(self.table,2,0,1,3)
 
         self.setLayout(self.Light_Source_BLU_button_layout)
@@ -100,6 +102,8 @@ class Light_Source_BLU(QWidget):
         self.export_data_button.clicked.connect(self.exportExcelData)
         self.add_column_button.clicked.connect(self.addColumn)
         self.create_data_button.clicked.connect(self.createDatabaseFromTable)
+        self.save_table_name_button.clicked.connect(self.save_which_table)
+
 
     def loadExcelData(self):
         # path = "F:\Program-learning\pycharmlearing\Side_project\OPT-color-pyside\測試用頻譜.xlsx"
@@ -374,14 +378,15 @@ class Light_Source_BLU(QWidget):
             # 在這裡加入相應的操作，例如從選擇的資料表中擷取資料並更新到 widget_table
 
             self.loadTableData(selected_table)
-            # 檢查是否進入這個分支
-            print("Entered tableSelectionChanged branch")  # 添加這行語句
-            # 調用回調函數，通知表頭發生變化
-            if self.update_table_header_callback:
-                print("Callback function exists")  # 添加這行語句
-                self.update_table_header_callback(header_labels)
-            else:
-                print("Callback function is None")  # 添加這行語句
+            # # 檢查是否進入這個分支
+            # print("Entered tableSelectionChanged branch")  # 添加這行語句
+            # # 調用回調函數，通知表頭發生變化
+            # if self.update_table_header_callback:
+            #     print("Callback function exists")  # 添加這行語句
+            #     self.update_table_header_callback(header_labels)
+            # else:
+            #     print("Callback function is None")  # 添加這行語句
+
 
     def loadTableData(self, table_name):
         # 在這裡加入載入資料的程式碼，將選擇的資料表的內容更新到 widget_table
@@ -394,7 +399,8 @@ class Light_Source_BLU(QWidget):
             return  # 如果表格不存在，直接返回
 
         # 獲取表格的標題
-        cursor.execute(f"PRAGMA table_info({table_name});")
+        cursor.execute(f"PRAGMA table_info('{table_name}');")
+
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
 
@@ -423,18 +429,23 @@ class Light_Source_BLU(QWidget):
         cursor = connection.cursor()
 
         # 获取表格的標題
-        cursor.execute(f"PRAGMA table_info({table_name});")
+        cursor.execute(f"PRAGMA table_info('{table_name}');")
+
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
         print("headerlabels",header_labels)
 
         # 關閉連線
         connection.close()
-        # 調用回調函數，通知表頭發生變化
-        if self.update_table_header_callback:
-            self.update_table_header_callback(header_labels)
-            print("在這裡")
-        print("Hello")
-
+        # # 調用回調函數，通知表頭發生變化
+        # if self.update_table_header_callback:
+        #     self.update_table_header_callback(header_labels)
+        #     print("在這裡")
+        # print("Hello")
         return header_labels
+    def save_which_table(self):
+        table_current = self.select_db_table.currentText()
+        print("table_current",table_current)
+        return table_current
+
 

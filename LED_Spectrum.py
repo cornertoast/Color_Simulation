@@ -368,7 +368,7 @@ class Led_Spectrum(QWidget):
             return  # 如果表格不存在，直接返回
 
         # 獲取表格的標題
-        cursor.execute(f"PRAGMA table_info({table_name});")
+        cursor.execute(f"PRAGMA table_info('{table_name}');")
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
 

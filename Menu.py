@@ -34,6 +34,7 @@ class Menu(QMainWindow):
         # 將 page2_layout 設置為 page2 的佈局
         self.page2.setLayout(self.page2_layout)
 
+
         # Page3
         self.page3 = QWidget()  # 創建一個新的 QWidget 實例
         self.tab_widget.addTab(self.page3, "LED_Spectrum")
