@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QGridLa
 
 from PySide6.QtGui import QKeyEvent,QColor,QPalette,QStandardItem,QKeySequence,QShortcut
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt,Signal,QObject
+from PySide6.QtCore import Qt
 from PySide6.QtCharts import QChart
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -15,14 +15,11 @@ import chardet
 import openpyxl
 import pandas as pd
 
-
-
 class EditableHeader(QHeaderView):
     def __init__(self, orientation, parent):
         super().__init__(orientation, parent)
         self.setSectionsMovable(True)
         self.setSectionsClickable(True)
-
 
         # 添加 QLineEdit 來實現編輯功能
         self.edit_line = QLineEdit(self)
@@ -41,19 +38,16 @@ class EditableHeader(QHeaderView):
         self.model().setHeaderData(index, self.orientation(), self.edit_line.text())
         self.edit_line.hide()
 
-class Light_Source_BLU(QWidget):
-    # 定義一個信號，傳遞標題列表
-    tablename_signal = Signal(str)
+class BSITO_Spectrum(QWidget):
     def __init__(self):
         super().__init__()
-
 
         # 實例化
         self.table = QTableWidget()
         self.table.setColumnCount(16)
         # self.table.setHorizontalHeaderLabels(["波長", "項目"])
         # 添加初始的行
-        self.table.setRowCount(499)
+        self.table.setRowCount(500)
         # 使用自定義的表頭
         self.table.setHorizontalHeader(EditableHeader(self.table.horizontalHeader().orientation(), self.table))
 
@@ -71,25 +65,21 @@ class Light_Source_BLU(QWidget):
         self.export_data_button = QPushButton("Export_excel")
         self.add_column_button = QPushButton("Add_column")
         self.create_data_button = QPushButton("Create_Table")
-        self.table_emit_button = QPushButton("table_emit")
         # SelectQcombobox
         self.select_db_table = QComboBox()
         self.updateTableComboBox()  # 初始化時更新 ComboBox 選項
         self.select_db_table.currentIndexChanged.connect(self.tableSelectionChanged)
 
 
+        self.BSITO_Spectrum_layout = QGridLayout()
+        self.BSITO_Spectrum_layout.addWidget(self.import_data_button, 0, 0)
+        self.BSITO_Spectrum_layout.addWidget(self.export_data_button, 0, 1)
+        self.BSITO_Spectrum_layout.addWidget(self.add_column_button, 0, 2)
+        self.BSITO_Spectrum_layout.addWidget(self.create_data_button, 1, 0)
+        self.BSITO_Spectrum_layout.addWidget(self.select_db_table, 1, 1)
+        self.BSITO_Spectrum_layout .addWidget(self.table, 2, 0, 1, 3)
 
-
-        self.Light_Source_BLU_button_layout = QGridLayout()
-        self.Light_Source_BLU_button_layout.addWidget(self.import_data_button,0,0)
-        self.Light_Source_BLU_button_layout.addWidget(self.export_data_button,0,1)
-        self.Light_Source_BLU_button_layout.addWidget(self.add_column_button,0,2)
-        self.Light_Source_BLU_button_layout.addWidget(self.create_data_button,1,0)
-        self.Light_Source_BLU_button_layout.addWidget(self.select_db_table,1,1)
-        self.Light_Source_BLU_button_layout.addWidget(self.table_emit_button,1,2)
-        self.Light_Source_BLU_button_layout .addWidget(self.table,2,0,1,3)
-
-        self.setLayout(self.Light_Source_BLU_button_layout)
+        self.setLayout(self.BSITO_Spectrum_layout)
 
         self.LoadDataBase()
 
@@ -100,7 +90,6 @@ class Light_Source_BLU(QWidget):
         self.export_data_button.clicked.connect(self.exportExcelData)
         self.add_column_button.clicked.connect(self.addColumn)
         self.create_data_button.clicked.connect(self.createDatabaseFromTable)
-        self.table_emit_button.clicked.connect(self.get_data_table_name)
 
     def loadExcelData(self):
         # path = "F:\Program-learning\pycharmlearing\Side_project\OPT-color-pyside\測試用頻譜.xlsx"
@@ -166,7 +155,7 @@ class Light_Source_BLU(QWidget):
             return
 
         # 創建或連接到 SQLite 資料庫
-        conn = sqlite3.connect("blu_database.db")
+        conn = sqlite3.connect("BSITO_spectrum.db")
         cursor = conn.cursor()
 
         # 取得表格的標題
@@ -309,16 +298,16 @@ class Light_Source_BLU(QWidget):
 
 
     def LoadDataBase(self):
-        connection = sqlite3.connect("blu_database.db")
+        connection = sqlite3.connect("BSITO_spectrum.db")
         cursor = connection.cursor()
         # 確保表格存在
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='blu_data';")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='BSITO';")
         if cursor.fetchone() is None:
             connection.close()
             return  # 如果表格不存在，直接返回
 
         # 獲取表格的標題
-        cursor.execute("PRAGMA table_info(blu_data);")
+        cursor.execute("PRAGMA table_info(BSITO);")
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
 
@@ -328,7 +317,7 @@ class Light_Source_BLU(QWidget):
         self.table.setHorizontalHeaderLabels(header_labels)
 
         # 獲取表格數據
-        result = connection.execute("SELECT * FROM blu_data")
+        result = connection.execute("SELECT * FROM BSITO")
 
         for row_number, row_data in enumerate(result):
             self.table.insertRow(row_number)
@@ -346,7 +335,7 @@ class Light_Source_BLU(QWidget):
         # 在需要更新 ComboBox 的地方呼叫這個函數
         # 例如，當你新增了新的 table 時，呼叫 updateTableComboBox() 以更新 ComboBox
         # 連接到 SQLite 資料庫
-        conn = sqlite3.connect("blu_database.db")
+        conn = sqlite3.connect("BSITO_spectrum.db")
         cursor = conn.cursor()
 
         # 取得所有的 table 名稱
@@ -358,7 +347,6 @@ class Light_Source_BLU(QWidget):
         for table in tables:
             self.select_db_table.addItem(table[0])
 
-
         # 關閉連線
         conn.close()
 
@@ -366,20 +354,12 @@ class Light_Source_BLU(QWidget):
         # 當 QComboBox 選擇變更時觸發的函數
         selected_table = self.select_db_table.currentText()
         if selected_table:
-            # 更新表格的列數和標題
-            header_labels = self.getTableHeader(selected_table)
-            self.table.setRowCount(0)  # 先清空表格
-            self.table.setColumnCount(len(header_labels))
-            self.table.setHorizontalHeaderLabels(header_labels)
-
             # 在這裡加入相應的操作，例如從選擇的資料表中擷取資料並更新到 widget_table
-
             self.loadTableData(selected_table)
-        return selected_table
 
     def loadTableData(self, table_name):
         # 在這裡加入載入資料的程式碼，將選擇的資料表的內容更新到 widget_table
-        connection = sqlite3.connect("blu_database.db")
+        connection = sqlite3.connect("BSITO_spectrum.db")
         cursor = connection.cursor()
         # 確保表格存在
         cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';")
@@ -410,25 +390,3 @@ class Light_Source_BLU(QWidget):
             #print("row data", row_data)
         connection.commit()
         connection.close()
-
-    def getTableHeader(self,table_name):
-        # 获取表头信息
-        connection = sqlite3.connect("blu_database.db")
-        cursor = connection.cursor()
-
-        # 获取表格的標題
-        cursor.execute(f"PRAGMA table_info('{table_name}');")
-        header_data = cursor.fetchall()
-        header_labels = [column[1] for column in header_data]
-        print("headerlabels-from source",header_labels)
-
-        # 關閉連線
-        connection.close()
-
-        return header_labels
-
-    def get_data_table_name(self):
-        table_name = self.tableSelectionChanged()
-        print("table_name",table_name)
-        self.tablename_signal.emit(table_name)
-

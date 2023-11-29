@@ -131,7 +131,10 @@ class Color_Enter(QWidget):
         # self.light_source_box.setBackgroundRole(QPalette.Window)
 
         self.light_source = QComboBox()
+
+        #self.light_source.currentIndexChanged.connect(self.calculate_color)
         self.light_source_datatable = QComboBox()
+        #self.light_source_datatable.currentIndexChanged.connect(self.calculate_color)
         self.light_source_datatable.setStyleSheet(QCOMBOBOXTABLESELECT)
         # 更新light_source_table
         self.update_light_source_datatable()
@@ -179,30 +182,40 @@ class Color_Enter(QWidget):
 
         # Layer區---------------------------------------------------------------
         self.layer1_mode = QComboBox()
-        layer1_mode_items = ["未選", "自訂", "模擬"]
+        layer1_mode_items = ["未選", "自訂"]
         for item in layer1_mode_items:
             self.layer1_mode.addItem(str(item))
         # 設定當前選中項目的文字顏色
         self.layer1_mode.setStyleSheet(QCOMBOXMODESETTING)
-        self.label_layer1 = QLabel("Layer_1")
+        self.label_layer1 = QLabel("Layer_1(Cell總和)")
+        # cell_頻譜選擇
         self.layer1_box = QComboBox()
-        layer1_box_items = ["未選"]
-        for item in layer1_box_items:
-            self.layer1_box.addItem(str(item))
+        # layer1_table
+        self.layer1_table = QComboBox()
+        self.layer1_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        self.update_layer1_datatable()
+        # 觸發layer1 table
+        self.updatelayer1ComboBox()# 初始化
+        self.layer1_table.currentIndexChanged.connect(self.updatelayer1ComboBox)
         # 設定當前選中項目的文字顏色
         self.layer1_box.setStyleSheet(QCOMBOXSETTING)
 
         self.layer2_mode = QComboBox()
-        layer2_mode_items = ["未選", "自訂", "模擬"]
+        layer2_mode_items = ["未選", "自訂"]
         for item in layer2_mode_items:
             self.layer2_mode.addItem(str(item))
         # 設定當前選中項目的文字顏色
         self.layer2_mode.setStyleSheet(QCOMBOXMODESETTING)
-        self.label_layer2 = QLabel("Layer_2")
+        self.label_layer2 = QLabel("Layer_2(BSITO)")
+        # cell_頻譜選擇
         self.layer2_box = QComboBox()
-        layer2_box_items = ["未選"]
-        for item in layer2_box_items:
-            self.layer2_box.addItem(str(item))
+        # layer2_table
+        self.layer2_table = QComboBox()
+        self.layer2_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        self.update_layer2_datatable()
+        # 觸發layer2 table
+        self.updatelayer2ComboBox()  # 初始化
+        self.layer2_table.currentIndexChanged.connect(self.updatelayer2ComboBox)
         # 設定當前選中項目的文字顏色
         self.layer2_box.setStyleSheet(QCOMBOXSETTING)
 
@@ -462,8 +475,8 @@ class Color_Enter(QWidget):
         # 設置游標樣式
         self.refresh.setCursor(Qt.PointingHandCursor)  # 手指形狀
 
-        self.refresh.clicked.connect(self.get_name)
-        self.calculate.clicked.connect(self.calculate_color)
+        self.refresh.clicked.connect(self.test)
+        self.calculate.clicked.connect(self.calculate_color_customize)
 
         # widget放置
         # color table
@@ -484,11 +497,13 @@ class Color_Enter(QWidget):
         # Layer區域---------------------------------------------------
         self.Color_Enter_layout.addWidget(self.layer1_mode, 7, 0)
         self.Color_Enter_layout.addWidget(self.layer1_box, 7, 1, 1, 2)
-        self.Color_Enter_layout.addWidget(self.label_layer1, 6, 0, 1, 3)  # 佔兩欄
+        self.Color_Enter_layout.addWidget(self.label_layer1, 6, 0, 1, 2)  # 佔兩欄
+        self.Color_Enter_layout.addWidget(self.layer1_table, 6, 2, 1, 1)  # 佔兩欄
 
         self.Color_Enter_layout.addWidget(self.layer2_mode, 7, 3)
         self.Color_Enter_layout.addWidget(self.layer2_box, 7, 4, 1, 2)
-        self.Color_Enter_layout.addWidget(self.label_layer2, 6, 3, 1, 3)
+        self.Color_Enter_layout.addWidget(self.label_layer2, 6, 3, 1, 2)
+        self.Color_Enter_layout.addWidget(self.layer2_table, 6, 5, 1, 1)
 
         self.Color_Enter_layout.addWidget(self.layer3_mode, 7, 6)
         self.Color_Enter_layout.addWidget(self.layer3_box, 7, 7, 1, 2)
@@ -573,81 +588,249 @@ class Color_Enter(QWidget):
         # Set Background
         self.setStyleSheet("background-color: lightyellow;")
 
-    # def updateLightSourceComboBox(self,table_name):
-    #     print("OK")
-    #
-    #     # 當 Light_Source_BLU 类的表格选择变更时调用,select_db_table是Light_Source_BLU的combobox選項
-    #     selected_table = table_name
-    #     print("selected_table",table_name)
-    #     # self.classlightsource.loadTableData(table_name =selected_table)
-    #     if selected_table:
-    #         # 獲取 BLUspectrum 的表头选项
-    #         header_items = self.classlightsource.getTableHeader(table_name=selected_table)
-    #         print("select_table",selected_table)
-    #         print("header_items",header_items)
-    #
-    #         # 清空 light_source 的选项
-    #         self.light_source.clear()
-    #
-    #
-    #         # 将获取的表头选项添加到 light_source 中
-    #         for item in header_items:
-    #             self.light_source.addItem(str(item))
-    #             print("item", str(item))
-
-    def get_name(self):
-        print("self.classlightsource.tablename_signal.connect(self.updateLightSourceComboBox)",self.classlightsource.tablename_signal.connect(self.updateLightSourceComboBox))
-
-        self.classlightsource.tablename_signal.connect(self.updateLightSourceComboBox)
-
-        print("PP")
 
     def test(self):
         self.color_table.setItem(2, 5, QTableWidgetItem(f"{self.light_source_mode.currentText()}"))
         if self.light_source_datatable.currentText() == 'blu_data':
             print("SSS")
 
-    def calculate_color(self):
-        print("calculate start")
+    def calculate_BLU(self):
         # BLU
+        # 選項關鍵----------------------------------------------
         if self.light_source_mode.currentText() == "自訂":
-            print("OKin")
-            connection = sqlite3.connect("blu_database.db")
-            cursor = connection.cursor()
+            print("OKin_BLU_自訂")
+            connection_BLU = sqlite3.connect("blu_database.db")
+            cursor_BLU = connection_BLU.cursor()
+            # 取得BLU資料
+            column_name_BLU = self.light_source.currentText()
+            table_name_BLU = self.light_source_datatable.currentText()
+            # 使用正確的引號包裹表名和列名
+            query_BLU = f"SELECT * FROM '{table_name_BLU}';"
+            cursor_BLU.execute(query_BLU)
+            result_BLU = cursor_BLU.fetchall()
+            # print("result_BLU",result_BLU)
 
-            # 確保表格存在
-            cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?;",
-                           (self.light_source_datatable.currentText(),))
-            if cursor.fetchone() is not None:
-                # 確保欄位存在
-                cursor.execute(f"PRAGMA table_info('{self.light_source_datatable.currentText()}');")
-                columns = [column[1] for column in cursor.fetchall()]
-                if self.light_source.currentText() in columns:
+            # 找到指定標題的欄位索引
+            header_BLU = [column[0] for column in cursor_BLU.description]
+            column_index_BLU = header_BLU.index(f"{column_name_BLU}")
 
-                    # 取得資料
-                    column_name = self.light_source.currentText()
-                    table_name = self.light_source_datatable.currentText()
-                    # 使用正確的引號包裹表名和列名
-                    query = f"SELECT '{column_name}' FROM '{table_name}';"
-                    cursor.execute(query)
-                    result = cursor.fetchall()
-                    print("result",result)
+            # 取得指定欄位的數據並轉換為 Series
+            BLU_spectrum_Series = pd.Series([row[column_index_BLU] for row in result_BLU])
+            #print("BLU_spectrum_Series", BLU_spectrum_Series)
 
-                    # 取得指定欄位的數據
-                    column_data = [row[0] for row in result]
-                    BLU_spectrum_Series = pd.Series(column_data)
-                    print("BLU_spectrum_Series", BLU_spectrum_Series)
+            # 將 Series 中的字符串轉換為數值
+            BLU_spectrum_Series = pd.to_numeric(BLU_spectrum_Series, errors='coerce')
 
-                else:
-                    print(
-                        f"欄位 {self.light_source.currentText()} 不存在於表格 {self.light_source_datatable.currentText()} 中")
-            else:
-                print(f"表格 {self.light_source_datatable.currentText()} 不存在")
+            # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
+            BLU_spectrum_Series = BLU_spectrum_Series.fillna(0)
+
+            # 刪除包含空值的行
+            BLU_spectrum_Series = BLU_spectrum_Series.dropna()
 
             # 關閉連線
-            connection.close()
+            connection_BLU.close()
+            # 自訂BLU_Spectrum回傳
+            return BLU_spectrum_Series
+            # 選項關鍵----------------------------------------------------------
+        elif self.light_source_mode.currentText() == "替換":
+            print("OKinBLU替換")
+            connection_BLU = sqlite3.connect("blu_database.db")
+            cursor_BLU = connection_BLU.cursor()
+            # 取得BLU資料------------------------------------------------------
+            column_name_BLU = self.light_source.currentText()
+            table_name_BLU = self.light_source_datatable.currentText()
+            # 使用正確的引號包裹表名和列名
+            query_BLU = f"SELECT * FROM '{table_name_BLU}';"
+            cursor_BLU.execute(query_BLU)
+            result_BLU = cursor_BLU.fetchall()
+            # print("result_BLU",result_BLU)
+
+            # 找到指定標題的欄位索引
+            header_BLU = [column[0] for column in cursor_BLU.description]
+            column_index_BLU = header_BLU.index(f"{column_name_BLU}")
+
+            # 取得指定欄位的數據並轉換為 Series
+            BLU_spectrum_Series = pd.Series([row[column_index_BLU] for row in result_BLU])
+            # 將 Series 中的字符串轉換為數值
+            BLU_spectrum_Series = pd.to_numeric(BLU_spectrum_Series, errors='coerce')
+
+            # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
+            BLU_spectrum_Series = BLU_spectrum_Series.fillna(0)
+
+            # 刪除包含空值的行
+            BLU_spectrum_Series = BLU_spectrum_Series.dropna()
+
+            # 轉換為 float64 數據類型
+            BLU_spectrum_Series = BLU_spectrum_Series.astype(float)
+
+            # 取得led_source資料
+            connection_led = sqlite3.connect("led_spectrum.db")
+            cursor_led = connection_led.cursor()
+            # 取得LED_Source資料------------------------------------------------------
+            column_name_led_source = self.light_source_led.currentText()
+            table_name_led_source = self.light_source_led_datatable.currentText()
+            # 使用正確的引號包裹表名和列名
+            query_LED_light_Source = f"SELECT * FROM '{table_name_led_source}';"
+            cursor_led.execute(query_LED_light_Source)
+            result_led_light_source = cursor_led.fetchall()
+
+            # 找到指定標題的欄位索引
+            header_LED_light_Source = [column[0] for column in cursor_led.description]
+            column_index_LED_light_Source = header_LED_light_Source.index(f"{column_name_led_source}")
+
+            # 取得指定欄位的數據並轉換為 LED_Source_Series
+            LED_light_Source_spectrum_Series = pd.Series([row[column_index_LED_light_Source] for row in result_led_light_source])
+            LED_light_Source_spectrum_Series = pd.to_numeric(LED_light_Source_spectrum_Series, errors='coerce')
+            LED_light_Source_spectrum_Series = LED_light_Source_spectrum_Series.dropna()
+            LED_light_Source_spectrum_Series = LED_light_Source_spectrum_Series.astype(float)
+            # print("LED_Source_spectrum_Series",LED_light_Source_spectrum_Series)
+
+            # 取得LED_database資料------------------------------------------------------
+            column_name_led_source_data = self.source_led.currentText()
+            table_name_led_source_data = self.source_led_datatable.currentText()
+            # 使用正確的引號包裹表名和列名
+            query_LED_Source = f"SELECT * FROM '{table_name_led_source_data}';"
+            cursor_led.execute(query_LED_Source)
+            result_led_source = cursor_led.fetchall()
+
+            # 找到指定標題的欄位索引
+            header_LED_Source = [column[0] for column in cursor_led.description]
+            column_index_LED_Source = header_LED_Source.index(f"{column_name_led_source_data}")
+
+            # 取得指定欄位的數據並轉換為 LED_Source_Series
+            LED_Source_spectrum_Series = pd.Series([row[column_index_LED_Source] for row in result_led_source])
+            LED_Source_spectrum_Series = pd.to_numeric(LED_Source_spectrum_Series, errors='coerce')
+            LED_Source_spectrum_Series = LED_Source_spectrum_Series.dropna()
+            LED_Source_spectrum_Series = LED_Source_spectrum_Series.astype(float)
+
+            # 替換BLU LED光譜
+            BLU_spectrum_Series = BLU_spectrum_Series / LED_light_Source_spectrum_Series * LED_Source_spectrum_Series
+
+            # 關閉連線
+            connection_BLU.close()
+            connection_led.close()
+            return BLU_spectrum_Series
         else:
-            print("NG")
+            print("BLU_None")
+            return None
+
+    def calculate_layer1(self):
+        if self.layer1_mode.currentText() == "自訂":
+            print("in_layer1_自訂")
+            connection_layer1 = sqlite3.connect("cell_spectrum.db")
+            cursor_layer1 = connection_layer1.cursor()
+            # 取得BLU資料
+            column_name_layer1 = self.layer1_box.currentText()
+            table_name_layer1 = self.layer1_table.currentText()
+            # 使用正確的引號包裹表名和列名
+            query_layer1 = f"SELECT * FROM '{table_name_layer1}';"
+            cursor_layer1.execute(query_layer1)
+            result_layer1 = cursor_layer1.fetchall()
+
+            # 找到指定標題的欄位索引
+            header_layer1 = [column[0] for column in cursor_layer1.description]
+            column_index_layer1 = header_layer1.index(f"{column_name_layer1}")
+
+            # 取得指定欄位的數據並轉換為 Series
+            layer1_spectrum_Series = pd.Series([row[column_index_layer1] for row in result_layer1])
+            print("layer1_spectrum_Series", layer1_spectrum_Series)
+
+            # 將 Series 中的字符串轉換為數值
+            layer1_spectrum_Series = pd.to_numeric(layer1_spectrum_Series, errors='coerce')
+
+            # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
+            layer1_spectrum_Series = layer1_spectrum_Series.fillna(0)
+
+            # 刪除包含空值的行
+            layer1_spectrum_Series = layer1_spectrum_Series.dropna()
+
+            # 關閉連線
+            connection_layer1.close()
+            # 自訂BLU_Spectrum回傳
+            return layer1_spectrum_Series
+        else:
+            print("layer1:None")
+            return None
+
+    def calculate_color_customize(self):
+        # 取得CIE資料(共用區)---------------------------------------------
+        connection_CIE = sqlite3.connect("CIE_spectrum.db")
+        cursor_CIE = connection_CIE.cursor()
+        # 使用正確的引號包裹表名和列名
+        query_CIE = f"SELECT * FROM 'CIE1931';"
+        cursor_CIE.execute(query_CIE)
+        result_CIE = cursor_CIE.fetchall()
+
+        # 找到指定標題的欄位索引
+        header_CIE = [column[0] for column in cursor_CIE.description]
+        column_index_CIE_R = header_CIE.index(f"x")
+        column_index_CIE_G = header_CIE.index(f"y")
+        column_index_CIE_B = header_CIE.index(f"z")
+
+        # 取得指定欄位的數據並轉換為 Series
+        CIE_spectrum_Series_R = pd.Series([row[column_index_CIE_R] for row in result_CIE])
+        # print("CIE_spectrum_Series_R",CIE_spectrum_Series_R)
+        CIE_spectrum_Series_G = pd.Series([row[column_index_CIE_G] for row in result_CIE])
+        CIE_spectrum_Series_B = pd.Series([row[column_index_CIE_B] for row in result_CIE])
+
+        # 將 Series 中的字符串轉換為數值
+        CIE_spectrum_Series_R = pd.to_numeric(CIE_spectrum_Series_R, errors='coerce')
+        CIE_spectrum_Series_G = pd.to_numeric(CIE_spectrum_Series_G, errors='coerce')
+        CIE_spectrum_Series_B = pd.to_numeric(CIE_spectrum_Series_B, errors='coerce')
+
+        # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
+        CIE_spectrum_Series_R = CIE_spectrum_Series_R.fillna(0)
+        CIE_spectrum_Series_G = CIE_spectrum_Series_G.fillna(0)
+        CIE_spectrum_Series_B = CIE_spectrum_Series_B.fillna(0)
+
+        # 刪除包含空值的行
+        CIE_spectrum_Series_R = CIE_spectrum_Series_R.dropna()
+        CIE_spectrum_Series_G = CIE_spectrum_Series_G.dropna()
+        CIE_spectrum_Series_B = CIE_spectrum_Series_B.dropna()
+
+        # 轉換為 float64 數據類型
+        CIE_spectrum_Series_R = CIE_spectrum_Series_R.astype(float)
+        CIE_spectrum_Series_G = CIE_spectrum_Series_G.astype(float)
+        CIE_spectrum_Series_B = CIE_spectrum_Series_B.astype(float)
+
+        # 檢查數據類型
+        # print("CIE_spectrum_Series_R dtype:", CIE_spectrum_Series_R.dtype)
+        # print("CIE_spectrum_Series_G dtype:", CIE_spectrum_Series_G.dtype)
+        # print("CIE_spectrum_Series_B dtype:", CIE_spectrum_Series_B.dtype)
+
+
+        if self.calculate_BLU() is not None:
+            # 計算BLU------------------------------------------------------------------
+            self.calculate_BLU()
+            print("self.calculate_BLU()",self.calculate_BLU())
+
+            RxSxxl = CIE_spectrum_Series_R * self.calculate_BLU()
+            RxSxyl = CIE_spectrum_Series_G * self.calculate_BLU()
+            RxSxzl = CIE_spectrum_Series_B * self.calculate_BLU()
+
+            BLU_spectrum_Series_sum = self.calculate_BLU().sum()
+            k = 100 / BLU_spectrum_Series_sum
+            RxSxxl_sum = RxSxxl.sum()
+            RxSxyl_sum = RxSxyl.sum()
+            RxSxzl_sum = RxSxzl.sum()
+            RxSxxl_sum_k = RxSxxl_sum * k
+            RxSxyl_sum_k = RxSxyl_sum * k
+            RxSxzl_sum_k = RxSxzl_sum * k
+            BLU_x = RxSxxl_sum_k / (RxSxxl_sum_k + RxSxyl_sum_k + RxSxzl_sum_k)
+            BLU_y = RxSxyl_sum_k / (RxSxxl_sum_k + RxSxyl_sum_k + RxSxzl_sum_k)
+            print("BLU_x", BLU_x)
+            print("BLU_y", BLU_y)
+            self.color_table.setItem(1, 14, QTableWidgetItem(f"{BLU_x:.3f}"))
+            self.color_table.setItem(1, 15, QTableWidgetItem(f"{BLU_y:.3f}"))
+
+        if self.calculate_BLU() is not None and self.calculate_layer1() is not None:
+            self.calculate_BLU()
+            self.calculate_layer1()
+            # 關閉連線
+            connection_CIE.close()
+
+
+
 # table更新function區--------------------------------------------------------------------------------------
     def update_light_source_datatable(self):
         # 更新 ComboBox 的選項
@@ -676,11 +859,11 @@ class Color_Enter(QWidget):
         cursor.execute(f"PRAGMA table_info('{self.light_source_datatable.currentText()}');")
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
-        print("headerlabels-from source", header_labels)
+        #print("headerlabels-from source", header_labels)
         self.light_source.clear()
         for item in header_labels:
             self.light_source.addItem(str(item))
-            print("item", str(item))
+            #print("item", str(item))
         # 關閉連線
         connection.close()
     def update_light_source_led_datatable(self):
@@ -711,11 +894,11 @@ class Color_Enter(QWidget):
         cursor.execute(f"PRAGMA table_info('{self.light_source_led_datatable.currentText()}');")
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
-        print("headerlabels-from source", header_labels)
+        #print("headerlabels-from source", header_labels)
         self.light_source_led.clear()
         for item in header_labels:
             self.light_source_led.addItem(str(item))
-            print("item", str(item))
+            #print("item", str(item))
         # 關閉連線
         connection.close()
     def update_source_led_datatable(self):
@@ -745,11 +928,81 @@ class Color_Enter(QWidget):
         cursor.execute(f"PRAGMA table_info('{self.source_led_datatable.currentText()}');")
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
-        print("headerlabels-from source", header_labels)
+        #print("headerlabels-from source", header_labels)
         self.source_led.clear()
         for item in header_labels:
             self.source_led.addItem(str(item))
-            print("item", str(item))
+            #print("item", str(item))
+        # 關閉連線
+        connection.close()
+    # cell
+    def update_layer1_datatable(self):
+        # 更新 ComboBox 的選項
+        # 在需要更新 ComboBox 的地方呼叫這個函數
+        # 例如，當你新增了新的 table 時，呼叫 updateTableComboBox() 以更新 ComboBox
+        # 連接到 SQLite 資料庫
+        conn = sqlite3.connect("cell_spectrum.db")
+        cursor = conn.cursor()
+
+        # 取得所有的 table 名稱
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+
+        # 更新 ComboBox 的選項
+        self.layer1_table.clear()
+        for table in tables:
+            self.layer1_table.addItem(table[0])
+
+        # 關閉連線
+        conn.close()
+    def updatelayer1ComboBox(self):
+        connection = sqlite3.connect("cell_spectrum.db")
+        cursor = connection.cursor()
+
+        # 获取表格的標題
+        cursor.execute(f"PRAGMA table_info('{self.layer1_table.currentText()}');")
+        header_data = cursor.fetchall()
+        header_labels = [column[1] for column in header_data]
+        #print("headerlabels-from source", header_labels)
+        self.layer1_box.clear()
+        for item in header_labels:
+            self.layer1_box.addItem(str(item))
+            #print("item", str(item))
+        # 關閉連線
+        connection.close()
+    # BSITO
+    def update_layer2_datatable(self):
+        # 更新 ComboBox 的選項
+        # 在需要更新 ComboBox 的地方呼叫這個函數
+        # 例如，當你新增了新的 table 時，呼叫 updateTableComboBox() 以更新 ComboBox
+        # 連接到 SQLite 資料庫
+        conn = sqlite3.connect("BSITO_spectrum.db")
+        cursor = conn.cursor()
+
+        # 取得所有的 table 名稱
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+
+        # 更新 ComboBox 的選項
+        self.layer2_table.clear()
+        for table in tables:
+            self.layer2_table.addItem(table[0])
+
+        # 關閉連線
+        conn.close()
+    def updatelayer2ComboBox(self):
+        connection = sqlite3.connect("BSITO_spectrum.db")
+        cursor = connection.cursor()
+
+        # 获取表格的標題
+        cursor.execute(f"PRAGMA table_info('{self.layer2_table.currentText()}');")
+        header_data = cursor.fetchall()
+        header_labels = [column[1] for column in header_data]
+        #print("headerlabels-from source", header_labels)
+        self.layer2_box.clear()
+        for item in header_labels:
+            self.layer2_box.addItem(str(item))
+            #print("item", str(item))
         # 關閉連線
         connection.close()
 
