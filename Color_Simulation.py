@@ -10,6 +10,7 @@ import sqlite3
 from Setting import *
 from Light_Source_BLU import *
 import pandas as pd
+import math
 
 
 class Color_Simulation(QWidget):
@@ -220,7 +221,7 @@ class Color_Enter(QWidget):
         self.layer2_box.setStyleSheet(QCOMBOXSETTING)
 
         self.layer3_mode = QComboBox()
-        layer3_mode_items = ["未選", "自訂", "模擬"]
+        layer3_mode_items = ["未選", "自訂"]
         for item in layer3_mode_items:
             self.layer3_mode.addItem(str(item))
         # 設定當前選中項目的文字顏色
@@ -234,7 +235,7 @@ class Color_Enter(QWidget):
         self.layer3_box.setStyleSheet(QCOMBOXSETTING)
 
         self.layer4_mode = QComboBox()
-        layer4_mode_items = ["未選", "自訂", "模擬"]
+        layer4_mode_items = ["未選", "自訂"]
         for item in layer4_mode_items:
             self.layer4_mode.addItem(str(item))
         # 設定當前選中項目的文字顏色
@@ -248,7 +249,7 @@ class Color_Enter(QWidget):
         self.layer4_box.setStyleSheet(QCOMBOXSETTING)
 
         self.layer5_mode = QComboBox()
-        layer5_mode_items = ["未選", "自訂", "模擬"]
+        layer5_mode_items = ["未選", "自訂"]
         for item in layer5_mode_items:
             self.layer5_mode.addItem(str(item))
         # 設定當前選中項目的文字顏色
@@ -262,7 +263,7 @@ class Color_Enter(QWidget):
         self.layer5_box.setStyleSheet(QCOMBOXSETTING)
 
         self.layer6_mode = QComboBox()
-        layer6_mode_items = ["未選", "自訂", "模擬"]
+        layer6_mode_items = ["未選", "自訂"]
         for item in layer6_mode_items:
             self.layer6_mode.addItem(str(item))
         # 設定當前選中項目的文字顏色
@@ -274,9 +275,10 @@ class Color_Enter(QWidget):
             self.layer6_box.addItem(str(item))
         # 設定當前選中項目的文字顏色
         self.layer6_box.setStyleSheet(QCOMBOXSETTING)
-        # RGB-Fix區域---------------------------------------------------
+        # RGB-Fix區域--------------------------------------------------------------------------------------------------
         self.RGB_fix_label = QLabel("RGB-Fix")
         self.RGB_fix_label.setStyleSheet("color: #5151A2; font-weight: bold; border: 2px solid black;")
+
         self.R_fix_mode = QComboBox()
         R_fix_mode_items = ["未選", "自訂", "模擬"]
         for item in R_fix_mode_items:
@@ -285,11 +287,15 @@ class Color_Enter(QWidget):
         self.R_fix_mode.setStyleSheet(QCOMBOXMODESETTING)
         self.R_fix_label = QLabel("R-CF-Fix")
         self.R_fix_box = QComboBox()
-        R_fix_box_items = ["未選"]
-        for item in R_fix_box_items:
-            self.R_fix_box.addItem(str(item))
         # 設定當前選中項目的文字顏色
         self.R_fix_box.setStyleSheet(QCOMBOXSETTING)
+        self.R_fix_table = QComboBox()
+        self.R_fix_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 觸發table連動改變
+        self.update_RCF_Fix_datatable()
+        self.updateRCF_Fix_ComboBox()
+        self.R_fix_table.currentIndexChanged.connect(self.update_RCF_Fix_datatable)
+
         self.R_TK_edit_label = QLabel("R-Fix-TK")
         self.R_TK_edit = QLineEdit()
         self.R_TK_edit.setFixedSize(100, 25)
@@ -302,11 +308,16 @@ class Color_Enter(QWidget):
         self.G_fix_mode.setStyleSheet(QCOMBOXMODESETTING)
         self.G_fix_label = QLabel("G-CF-Fix")
         self.G_fix_box = QComboBox()
-        G_fix_box_items = ["未選"]
-        for item in G_fix_box_items:
-            self.G_fix_box.addItem(str(item))
         # 設定當前選中項目的文字顏色
         self.G_fix_box.setStyleSheet(QCOMBOXSETTING)
+
+        self.G_fix_table = QComboBox()
+        self.G_fix_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 觸發table連動改變
+        self.update_GCF_Fix_datatable()
+        self.updateGCF_Fix_ComboBox()
+        self.G_fix_table.currentIndexChanged.connect(self.update_GCF_Fix_datatable)
+
         self.G_TK_edit_label = QLabel("G-Fix-TK")
         self.G_TK_edit = QLineEdit()
         self.G_TK_edit.setFixedSize(100, 25)
@@ -319,11 +330,15 @@ class Color_Enter(QWidget):
         self.B_fix_mode.setStyleSheet(QCOMBOXMODESETTING)
         self.B_fix_label = QLabel("B-CF-Fix")
         self.B_fix_box = QComboBox()
-        B_fix_box_items = ["未選"]
-        for item in B_fix_box_items:
-            self.B_fix_box.addItem(str(item))
         # 設定當前選中項目的文字顏色
         self.B_fix_box.setStyleSheet(QCOMBOXSETTING)
+        self.B_fix_table = QComboBox()
+        self.B_fix_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 觸發table連動改變
+        self.update_BCF_Fix_datatable()
+        self.updateBCF_Fix_ComboBox()
+        self.B_fix_table.currentIndexChanged.connect(self.update_BCF_Fix_datatable)
+
         self.B_TK_edit_label = QLabel("B-Fix-TK")
         self.B_TK_edit = QLineEdit()
         self.B_TK_edit.setFixedSize(100, 25)
@@ -525,19 +540,19 @@ class Color_Enter(QWidget):
         self.Color_Enter_layout.addWidget(self.RGB_fix_label, 10, 0)
         self.Color_Enter_layout.addWidget(self.R_fix_mode, 11, 0)
         self.Color_Enter_layout.addWidget(self.R_fix_box, 11, 1)
-        self.Color_Enter_layout.addWidget(self.R_fix_label, 10, 1)
+        self.Color_Enter_layout.addWidget(self.R_fix_table, 10, 1)
         self.Color_Enter_layout.addWidget(self.R_TK_edit_label, 10, 2)
         self.Color_Enter_layout.addWidget(self.R_TK_edit, 11, 2)
 
         self.Color_Enter_layout.addWidget(self.G_fix_mode, 11, 3)
         self.Color_Enter_layout.addWidget(self.G_fix_box, 11, 4)
-        self.Color_Enter_layout.addWidget(self.G_fix_label, 10, 4)
+        self.Color_Enter_layout.addWidget(self.G_fix_table, 10, 4)
         self.Color_Enter_layout.addWidget(self.G_TK_edit_label, 10, 5)
         self.Color_Enter_layout.addWidget(self.G_TK_edit, 11, 5)
 
         self.Color_Enter_layout.addWidget(self.B_fix_mode, 11, 6)
         self.Color_Enter_layout.addWidget(self.B_fix_box, 11, 7)
-        self.Color_Enter_layout.addWidget(self.B_fix_label, 10, 7)
+        self.Color_Enter_layout.addWidget(self.B_fix_table, 10, 7)
         self.Color_Enter_layout.addWidget(self.B_TK_edit_label, 10, 8)
         self.Color_Enter_layout.addWidget(self.B_TK_edit, 11, 8)
 
@@ -612,11 +627,18 @@ class Color_Enter(QWidget):
 
             # 找到指定標題的欄位索引
             header_BLU = [column[0] for column in cursor_BLU.description]
+            print("header_BLU",header_BLU)
             column_index_BLU = header_BLU.index(f"{column_name_BLU}")
+
+            # 取得下一個欄位的名稱
+            next_column_name_BLU = header_BLU[column_index_BLU + 1]
+            print("next_column_name_BLU",next_column_name_BLU)
 
             # 取得指定欄位的數據並轉換為 Series
             BLU_spectrum_Series = pd.Series([row[column_index_BLU] for row in result_BLU])
-            #print("BLU_spectrum_Series", BLU_spectrum_Series)
+            print("column_index_BLU",column_index_BLU)
+            BLU_spectrum_Series_test =pd.Series([row[column_index_BLU+1] for row in result_BLU])
+            print("BLU_spectrum_Series_test", BLU_spectrum_Series_test)
 
             # 將 Series 中的字符串轉換為數值
             BLU_spectrum_Series = pd.to_numeric(BLU_spectrum_Series, errors='coerce')
@@ -713,7 +735,7 @@ class Color_Enter(QWidget):
         else:
             print("BLU_None")
             return None
-
+    # Cell
     def calculate_layer1(self):
         if self.layer1_mode.currentText() == "自訂":
             print("in_layer1_自訂")
@@ -733,7 +755,7 @@ class Color_Enter(QWidget):
 
             # 取得指定欄位的數據並轉換為 Series
             layer1_spectrum_Series = pd.Series([row[column_index_layer1] for row in result_layer1])
-            print("layer1_spectrum_Series", layer1_spectrum_Series)
+            #print("layer1_spectrum_Series", layer1_spectrum_Series)
 
             # 將 Series 中的字符串轉換為數值
             layer1_spectrum_Series = pd.to_numeric(layer1_spectrum_Series, errors='coerce')
@@ -749,7 +771,165 @@ class Color_Enter(QWidget):
             # 自訂BLU_Spectrum回傳
             return layer1_spectrum_Series
         else:
-            print("layer1:None")
+            layer1_spectrum_Series = 1
+            print("layer1:未選")
+            return layer1_spectrum_Series
+
+    # BSITO
+    def calculate_layer2(self):
+        if self.layer2_mode.currentText() == "自訂":
+            print("in_layer2_自訂")
+            connection_layer2 = sqlite3.connect("BSITO_spectrum.db")
+            cursor_layer2 = connection_layer2.cursor()
+            # 取得BLU資料
+            column_name_layer2 = self.layer2_box.currentText()
+            table_name_layer2 = self.layer2_table.currentText()
+            # 使用正確的引號包裹表名和列名
+            query_layer2 = f"SELECT * FROM '{table_name_layer2}';"
+            cursor_layer2.execute(query_layer2)
+            result_layer2 = cursor_layer2.fetchall()
+
+            # 找到指定標題的欄位索引
+            header_layer2 = [column[0] for column in cursor_layer2.description]
+            column_index_layer2 = header_layer2.index(f"{column_name_layer2}")
+
+            # 取得指定欄位的數據並轉換為 Series
+            layer2_spectrum_Series = pd.Series([row[column_index_layer2] for row in result_layer2])
+            #print("layer2_spectrum_Series", layer2_spectrum_Series)
+
+            # 將 Series 中的字符串轉換為數值
+            layer2_spectrum_Series = pd.to_numeric(layer2_spectrum_Series, errors='coerce')
+
+            # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
+            layer2_spectrum_Series = layer2_spectrum_Series.fillna(0)
+
+            # 刪除包含空值的行
+            layer2_spectrum_Series = layer2_spectrum_Series.dropna()
+
+            # 關閉連線
+            connection_layer2.close()
+            # 自訂BLU_Spectrum回傳
+            return layer2_spectrum_Series
+        else:
+            layer2_spectrum_Series = 1
+            print("layer2:未選")
+            return layer2_spectrum_Series
+
+    # RCF_Fix
+    def calculate_RCF_Fix(self):
+        if self.R_fix_mode.currentText() == "自訂":
+            print("in_RCF_Fix_自訂")
+            connection_RCF_Fix = sqlite3.connect("RCF_Fix_spectrum.db")
+            cursor_RCF_Fix = connection_RCF_Fix.cursor()
+            # 取得BLU資料
+            column_name_RCF_Fix = self.R_fix_box.currentText()
+            table_name_RCF_Fix = self.R_fix_table.currentText()
+            # 使用正確的引號包裹表名和列名
+            query_RCF_Fix = f"SELECT * FROM '{table_name_RCF_Fix}';"
+            cursor_RCF_Fix.execute(query_RCF_Fix)
+            result_RCF_Fix = cursor_RCF_Fix.fetchall()
+
+            # 找到指定標題的欄位索引
+            header_RCF_Fix = [column[0] for column in cursor_RCF_Fix.description]
+            column_index_RCF_Fix = header_RCF_Fix.index(f"{column_name_RCF_Fix}")
+
+            # 取得指定欄位的數據並轉換為 Series
+            RCF_Fix_spectrum_Series = pd.Series([row[column_index_RCF_Fix] for row in result_RCF_Fix])
+            #print("RCF_Fix_spectrum_Series", RCF_Fix_spectrum_Series)
+
+            # 將 Series 中的字符串轉換為數值
+            RCF_Fix_spectrum_Series = pd.to_numeric(RCF_Fix_spectrum_Series, errors='coerce')
+
+            # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
+            RCF_Fix_spectrum_Series = RCF_Fix_spectrum_Series.fillna(0)
+
+            # 刪除包含空值的行
+            RCF_Fix_spectrum_Series = RCF_Fix_spectrum_Series.dropna()
+
+            # 關閉連線
+            connection_RCF_Fix.close()
+            # 自訂RCF_Fix_Spectrum回傳
+            return RCF_Fix_spectrum_Series
+        else:
+            print("RCF_Fix:None")
+            return None
+
+    # GCF_Fix
+    def calculate_GCF_Fix(self):
+        if self.G_fix_mode.currentText() == "自訂":
+            print("in_GCF_Fix_自訂")
+            connection_GCF_Fix = sqlite3.connect("GCF_Fix_spectrum.db")
+            cursor_GCF_Fix = connection_GCF_Fix.cursor()
+            # 取得BLU資料
+            column_name_GCF_Fix = self.G_fix_box.currentText()
+            table_name_GCF_Fix = self.G_fix_table.currentText()
+            # 使用正確的引號包裹表名和列名
+            query_GCF_Fix = f"SELECT * FROM '{table_name_GCF_Fix}';"
+            cursor_GCF_Fix.execute(query_GCF_Fix)
+            result_GCF_Fix = cursor_GCF_Fix.fetchall()
+
+            # 找到指定標題的欄位索引
+            header_GCF_Fix = [column[0] for column in cursor_GCF_Fix.description]
+            column_index_GCF_Fix = header_GCF_Fix.index(f"{column_name_GCF_Fix}")
+
+            # 取得指定欄位的數據並轉換為 Series
+            GCF_Fix_spectrum_Series = pd.Series([row[column_index_GCF_Fix] for row in result_GCF_Fix])
+            #print("GCF_Fix_spectrum_Series", GCF_Fix_spectrum_Series)
+
+            # 將 Series 中的字符串轉換為數值
+            GCF_Fix_spectrum_Series = pd.to_numeric(GCF_Fix_spectrum_Series, errors='coerce')
+
+            # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
+            GCF_Fix_spectrum_Series = GCF_Fix_spectrum_Series.fillna(0)
+
+            # 刪除包含空值的行
+            GCF_Fix_spectrum_Series = GCF_Fix_spectrum_Series.dropna()
+
+            # 關閉連線
+            connection_GCF_Fix.close()
+            # 自訂GCF_Fix_Spectrum回傳
+            return GCF_Fix_spectrum_Series
+        else:
+            print("GCF_Fix:None")
+            return None
+
+    # BCF_Fix
+    def calculate_BCF_Fix(self):
+        if self.B_fix_mode.currentText() == "自訂":
+            print("in_BCF_Fix_自訂")
+            connection_BCF_Fix = sqlite3.connect("BCF_Fix_spectrum.db")
+            cursor_BCF_Fix = connection_BCF_Fix.cursor()
+            # 取得BLU資料
+            column_name_BCF_Fix = self.B_fix_box.currentText()
+            table_name_BCF_Fix = self.B_fix_table.currentText()
+            # 使用正確的引號包裹表名和列名
+            query_BCF_Fix = f"SELECT * FROM '{table_name_BCF_Fix}';"
+            cursor_BCF_Fix.execute(query_BCF_Fix)
+            result_BCF_Fix = cursor_BCF_Fix.fetchall()
+
+            # 找到指定標題的欄位索引
+            header_BCF_Fix = [column[0] for column in cursor_BCF_Fix.description]
+            column_index_BCF_Fix = header_BCF_Fix.index(f"{column_name_BCF_Fix}")
+
+            # 取得指定欄位的數據並轉換為 Series
+            BCF_Fix_spectrum_Series = pd.Series([row[column_index_BCF_Fix] for row in result_BCF_Fix])
+            #print("BCF_Fix_spectrum_Series", BCF_Fix_spectrum_Series)
+
+            # 將 Series 中的字符串轉換為數值
+            BCF_Fix_spectrum_Series = pd.to_numeric(BCF_Fix_spectrum_Series, errors='coerce')
+
+            # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
+            BCF_Fix_spectrum_Series = BCF_Fix_spectrum_Series.fillna(0)
+
+            # 刪除包含空值的行
+            BCF_Fix_spectrum_Series = BCF_Fix_spectrum_Series.dropna()
+
+            # 關閉連線
+            connection_BCF_Fix.close()
+            # 自訂BCF_Fix_Spectrum回傳
+            return BCF_Fix_spectrum_Series
+        else:
+            print("BCF_Fix:None")
             return None
 
     def calculate_color_customize(self):
@@ -763,50 +943,73 @@ class Color_Enter(QWidget):
 
         # 找到指定標題的欄位索引
         header_CIE = [column[0] for column in cursor_CIE.description]
-        column_index_CIE_R = header_CIE.index(f"x")
-        column_index_CIE_G = header_CIE.index(f"y")
-        column_index_CIE_B = header_CIE.index(f"z")
+        column_index_CIE_X = header_CIE.index(f"x")
+        column_index_CIE_Y = header_CIE.index(f"y")
+        column_index_CIE_Z = header_CIE.index(f"z")
 
         # 取得指定欄位的數據並轉換為 Series
-        CIE_spectrum_Series_R = pd.Series([row[column_index_CIE_R] for row in result_CIE])
-        # print("CIE_spectrum_Series_R",CIE_spectrum_Series_R)
-        CIE_spectrum_Series_G = pd.Series([row[column_index_CIE_G] for row in result_CIE])
-        CIE_spectrum_Series_B = pd.Series([row[column_index_CIE_B] for row in result_CIE])
+        CIE_spectrum_Series_X = pd.Series([row[column_index_CIE_X] for row in result_CIE])
+        # print("CIE_spectrum_Series_X",CIE_spectrum_Series_X)
+        CIE_spectrum_Series_Y = pd.Series([row[column_index_CIE_Y] for row in result_CIE])
+        CIE_spectrum_Series_Z = pd.Series([row[column_index_CIE_Z] for row in result_CIE])
 
         # 將 Series 中的字符串轉換為數值
-        CIE_spectrum_Series_R = pd.to_numeric(CIE_spectrum_Series_R, errors='coerce')
-        CIE_spectrum_Series_G = pd.to_numeric(CIE_spectrum_Series_G, errors='coerce')
-        CIE_spectrum_Series_B = pd.to_numeric(CIE_spectrum_Series_B, errors='coerce')
+        CIE_spectrum_Series_X = pd.to_numeric(CIE_spectrum_Series_X, errors='coerce')
+        CIE_spectrum_Series_Y = pd.to_numeric(CIE_spectrum_Series_Y, errors='coerce')
+        CIE_spectrum_Series_Z = pd.to_numeric(CIE_spectrum_Series_Z, errors='coerce')
 
         # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
-        CIE_spectrum_Series_R = CIE_spectrum_Series_R.fillna(0)
-        CIE_spectrum_Series_G = CIE_spectrum_Series_G.fillna(0)
-        CIE_spectrum_Series_B = CIE_spectrum_Series_B.fillna(0)
+        CIE_spectrum_Series_X = CIE_spectrum_Series_X.fillna(0)
+        CIE_spectrum_Series_Y = CIE_spectrum_Series_Y.fillna(0)
+        CIE_spectrum_Series_Z = CIE_spectrum_Series_Z.fillna(0)
 
         # 刪除包含空值的行
-        CIE_spectrum_Series_R = CIE_spectrum_Series_R.dropna()
-        CIE_spectrum_Series_G = CIE_spectrum_Series_G.dropna()
-        CIE_spectrum_Series_B = CIE_spectrum_Series_B.dropna()
+        CIE_spectrum_Series_X = CIE_spectrum_Series_X.dropna()
+        CIE_spectrum_Series_Y = CIE_spectrum_Series_Y.dropna()
+        CIE_spectrum_Series_Z = CIE_spectrum_Series_Z.dropna()
 
         # 轉換為 float64 數據類型
-        CIE_spectrum_Series_R = CIE_spectrum_Series_R.astype(float)
-        CIE_spectrum_Series_G = CIE_spectrum_Series_G.astype(float)
-        CIE_spectrum_Series_B = CIE_spectrum_Series_B.astype(float)
+        CIE_spectrum_Series_X = CIE_spectrum_Series_X.astype(float)
+        CIE_spectrum_Series_Y = CIE_spectrum_Series_Y.astype(float)
+        CIE_spectrum_Series_Z = CIE_spectrum_Series_Z.astype(float)
 
         # 檢查數據類型
         # print("CIE_spectrum_Series_R dtype:", CIE_spectrum_Series_R.dtype)
         # print("CIE_spectrum_Series_G dtype:", CIE_spectrum_Series_G.dtype)
         # print("CIE_spectrum_Series_B dtype:", CIE_spectrum_Series_B.dtype)
 
+        # 取得C-light
+        connection_C = sqlite3.connect("blu_database.db")
+        cursor_C = connection_C.cursor()
+        # 使用正確的引號包裹表名和列名
+        query_C = f"SELECT * FROM 'Clight';"
+        cursor_C.execute(query_C)
+        result_C = cursor_C.fetchall()
+
+        # 找到指定標題的欄位索引
+        header_C = [column[0] for column in cursor_C.description]
+        column_index_C = header_C.index(f"Clight")
+
+        # 取得指定欄位的數據並轉換為 Series
+        C_spectrum_Series = pd.Series([row[column_index_C] for row in result_C])
+        # 將 Series 中的字符串轉換為數值
+        C_spectrum_Series = pd.to_numeric(C_spectrum_Series, errors='coerce')
+        # 將 NaN 值替換為 0，或者根據實際需求替換為其他值
+        C_spectrum_Series = C_spectrum_Series.fillna(0)
+        # 刪除包含空值的行
+        C_spectrum_Series = C_spectrum_Series.dropna()
+        # 轉換為 float64 數據類型
+        C_spectrum_Series = C_spectrum_Series.astype(float)
+
 
         if self.calculate_BLU() is not None:
             # 計算BLU------------------------------------------------------------------
             self.calculate_BLU()
-            print("self.calculate_BLU()",self.calculate_BLU())
+            #print("self.calculate_BLU()",self.calculate_BLU())
 
-            RxSxxl = CIE_spectrum_Series_R * self.calculate_BLU()
-            RxSxyl = CIE_spectrum_Series_G * self.calculate_BLU()
-            RxSxzl = CIE_spectrum_Series_B * self.calculate_BLU()
+            RxSxxl = CIE_spectrum_Series_X * self.calculate_BLU()
+            RxSxyl = CIE_spectrum_Series_Y * self.calculate_BLU()
+            RxSxzl = CIE_spectrum_Series_Z * self.calculate_BLU()
 
             BLU_spectrum_Series_sum = self.calculate_BLU().sum()
             k = 100 / BLU_spectrum_Series_sum
@@ -823,9 +1026,148 @@ class Color_Enter(QWidget):
             self.color_table.setItem(1, 14, QTableWidgetItem(f"{BLU_x:.3f}"))
             self.color_table.setItem(1, 15, QTableWidgetItem(f"{BLU_y:.3f}"))
 
-        if self.calculate_BLU() is not None and self.calculate_layer1() is not None:
+        if self.calculate_BLU() is not None and self.calculate_RCF_Fix() is not None\
+                and self.calculate_GCF_Fix() is not None and self.calculate_BCF_Fix() is not None:
             self.calculate_BLU()
             self.calculate_layer1()
+            self.calculate_layer2()
+            self.calculate_RCF_Fix()
+            self.calculate_GCF_Fix()
+            self.calculate_BCF_Fix()
+            # BLU +Cell part
+            cell_blu_total_spectrum = self.calculate_BLU() * self.calculate_layer1() * self.calculate_layer2()
+            #print("self.calculate_BLU()",self.calculate_BLU())
+            #print("cell_blu_total_spectrum",cell_blu_total_spectrum)
+            # R_Fix
+            R_Fix = cell_blu_total_spectrum * self.calculate_RCF_Fix()
+            R_Fix_X = R_Fix * CIE_spectrum_Series_X
+            R_Fix_Y = R_Fix * CIE_spectrum_Series_Y
+            R_Fix_Z = R_Fix * CIE_spectrum_Series_Z
+            R_Fix_X_sum = R_Fix_X.sum()
+            R_Fix_Y_sum = R_Fix_Y.sum()
+            R_Fix_Z_sum = R_Fix_Z.sum()
+            R_Fix_x = R_Fix_X_sum / (R_Fix_X_sum + R_Fix_Y_sum + R_Fix_Z_sum)
+            R_Fix_y = R_Fix_Y_sum / (R_Fix_X_sum + R_Fix_Y_sum + R_Fix_Z_sum)
+            R_Fix_T = R_Fix_Y_sum * 3
+            self.color_table.setItem(1, 4, QTableWidgetItem(f"{R_Fix_x:.3f}"))
+            self.color_table.setItem(1, 5, QTableWidgetItem(f"{R_Fix_y:.3f}"))
+            self.color_table.setItem(1, 6, QTableWidgetItem(f"{R_Fix_T:.3f}%"))
+
+            # G_Fix
+            G_Fix = cell_blu_total_spectrum * self.calculate_GCF_Fix()
+            G_Fix_X = G_Fix * CIE_spectrum_Series_X
+            G_Fix_Y = G_Fix * CIE_spectrum_Series_Y
+            G_Fix_Z = G_Fix * CIE_spectrum_Series_Z
+            G_Fix_X_sum = G_Fix_X.sum()
+            G_Fix_Y_sum = G_Fix_Y.sum()
+            G_Fix_Z_sum = G_Fix_Z.sum()
+            G_Fix_x = G_Fix_X_sum / (G_Fix_X_sum + G_Fix_Y_sum + G_Fix_Z_sum)
+            G_Fix_y = G_Fix_Y_sum / (G_Fix_X_sum + G_Fix_Y_sum + G_Fix_Z_sum)
+            G_Fix_T = G_Fix_Y_sum * 3
+            self.color_table.setItem(1, 7, QTableWidgetItem(f"{G_Fix_x:.3f}"))
+            self.color_table.setItem(1, 8, QTableWidgetItem(f"{G_Fix_y:.3f}"))
+            self.color_table.setItem(1, 9, QTableWidgetItem(f"{G_Fix_T:.3f}%"))
+
+            # B_Fix
+            B_Fix = cell_blu_total_spectrum * self.calculate_BCF_Fix()
+            B_Fix_X = B_Fix * CIE_spectrum_Series_X
+            B_Fix_Y = B_Fix * CIE_spectrum_Series_Y
+            B_Fix_Z = B_Fix * CIE_spectrum_Series_Z
+            B_Fix_X_sum = B_Fix_X.sum()
+            B_Fix_Y_sum = B_Fix_Y.sum()
+            B_Fix_Z_sum = B_Fix_Z.sum()
+            B_Fix_x = B_Fix_X_sum / (B_Fix_X_sum + B_Fix_Y_sum + B_Fix_Z_sum)
+            B_Fix_y = B_Fix_Y_sum / (B_Fix_X_sum + B_Fix_Y_sum + B_Fix_Z_sum)
+            B_Fix_T = B_Fix_Y_sum * 3
+            self.color_table.setItem(1, 10, QTableWidgetItem(f"{B_Fix_x:.3f}"))
+            self.color_table.setItem(1, 11, QTableWidgetItem(f"{B_Fix_y:.3f}"))
+            self.color_table.setItem(1, 12, QTableWidgetItem(f"{B_Fix_T:.3f}%"))
+
+            # W_Fix
+            W_Fix_X = R_Fix_X + G_Fix_X + B_Fix_X
+            W_Fix_Y = R_Fix_Y + G_Fix_Y + B_Fix_Y
+            W_Fix_Z = R_Fix_Z + G_Fix_Z + B_Fix_Z
+            W_Fix_X_sum = W_Fix_X.sum()
+            W_Fix_Y_sum = W_Fix_Y .sum()
+            W_Fix_Z_sum = W_Fix_Z.sum()
+            W_Fix_x = W_Fix_X_sum / (W_Fix_X_sum + W_Fix_Y_sum + W_Fix_Z_sum)
+            W_Fix_y = W_Fix_Y_sum / (W_Fix_X_sum + W_Fix_Y_sum + W_Fix_Z_sum)
+            W_Fix_T = W_Fix_Y_sum
+            self.color_table.setItem(1, 1, QTableWidgetItem(f"{W_Fix_x:.3f}"))
+            self.color_table.setItem(1, 2, QTableWidgetItem(f"{W_Fix_y:.3f}"))
+            self.color_table.setItem(1, 3, QTableWidgetItem(f"{W_Fix_T:.3f}%"))
+
+            #NTSC
+            NTSC = 100 * 0.5 * abs((R_Fix_x * G_Fix_y + G_Fix_x * B_Fix_y + B_Fix_x * R_Fix_y-(G_Fix_x * R_Fix_y)-(B_Fix_x * G_Fix_y)-(R_Fix_x*B_Fix_y)))/ 0.1582
+            self.color_table.setItem(1, 13, QTableWidgetItem(f"{NTSC:.3f}%"))
+
+            # Clight +Cell part
+            cell_C_total_spectrum = C_spectrum_Series * self.calculate_layer1() * self.calculate_layer2()
+            # print("self.calculate_BLU()",self.calculate_BLU())
+            # print("cell_blu_total_spectrum",cell_blu_total_spectrum)
+            # RC_Fix
+            RC_Fix = cell_C_total_spectrum * self.calculate_RCF_Fix()
+            RC_Fix_X = RC_Fix * CIE_spectrum_Series_X
+            RC_Fix_Y = RC_Fix * CIE_spectrum_Series_Y
+            RC_Fix_Z = RC_Fix * CIE_spectrum_Series_Z
+            RC_Fix_X_sum = RC_Fix_X.sum()
+            RC_Fix_Y_sum = RC_Fix_Y.sum()
+            RC_Fix_Z_sum = RC_Fix_Z.sum()
+            RC_Fix_x = RC_Fix_X_sum / (RC_Fix_X_sum + RC_Fix_Y_sum + RC_Fix_Z_sum)
+            RC_Fix_y = RC_Fix_Y_sum / (RC_Fix_X_sum + RC_Fix_Y_sum + RC_Fix_Z_sum)
+            RC_Fix_T = RC_Fix_Y_sum * 3
+            self.color_table.setItem(2, 4, QTableWidgetItem(f"{RC_Fix_x:.3f}"))
+            self.color_table.setItem(2, 5, QTableWidgetItem(f"{RC_Fix_y:.3f}"))
+            self.color_table.setItem(2, 6, QTableWidgetItem(f"{RC_Fix_T:.3f}%"))
+
+            # GC_Fix
+            GC_Fix = cell_blu_total_spectrum * self.calculate_GCF_Fix()
+            GC_Fix_X = GC_Fix * CIE_spectrum_Series_X
+            GC_Fix_Y = GC_Fix * CIE_spectrum_Series_Y
+            GC_Fix_Z = GC_Fix * CIE_spectrum_Series_Z
+            GC_Fix_X_sum = GC_Fix_X.sum()
+            GC_Fix_Y_sum = GC_Fix_Y.sum()
+            GC_Fix_Z_sum = GC_Fix_Z.sum()
+            GC_Fix_x = GC_Fix_X_sum / (GC_Fix_X_sum + GC_Fix_Y_sum + GC_Fix_Z_sum)
+            GC_Fix_y = G_Fix_Y_sum / (GC_Fix_X_sum + GC_Fix_Y_sum + GC_Fix_Z_sum)
+            GC_Fix_T = G_Fix_Y_sum * 3
+            self.color_table.setItem(2, 7, QTableWidgetItem(f"{GC_Fix_x:.3f}"))
+            self.color_table.setItem(2, 8, QTableWidgetItem(f"{GC_Fix_y:.3f}"))
+            self.color_table.setItem(2, 9, QTableWidgetItem(f"{GC_Fix_T:.3f}%"))
+
+            # BC_Fix
+            BC_Fix = cell_blu_total_spectrum * self.calculate_BCF_Fix()
+            BC_Fix_X = BC_Fix * CIE_spectrum_Series_X
+            BC_Fix_Y = BC_Fix * CIE_spectrum_Series_Y
+            BC_Fix_Z = BC_Fix * CIE_spectrum_Series_Z
+            BC_Fix_X_sum = BC_Fix_X.sum()
+            BC_Fix_Y_sum = BC_Fix_Y.sum()
+            BC_Fix_Z_sum = BC_Fix_Z.sum()
+            BC_Fix_x = BC_Fix_X_sum / (BC_Fix_X_sum + BC_Fix_Y_sum + BC_Fix_Z_sum)
+            BC_Fix_y = BC_Fix_Y_sum / (BC_Fix_X_sum + BC_Fix_Y_sum + BC_Fix_Z_sum)
+            BC_Fix_T = BC_Fix_Y_sum * 3
+            self.color_table.setItem(2, 10, QTableWidgetItem(f"{BC_Fix_x:.3f}"))
+            self.color_table.setItem(2, 11, QTableWidgetItem(f"{BC_Fix_y:.3f}"))
+            self.color_table.setItem(2, 12, QTableWidgetItem(f"{BC_Fix_T:.3f}%"))
+
+            # W_Fix
+            WC_Fix_X = RC_Fix_X + GC_Fix_X + BC_Fix_X
+            WC_Fix_Y = RC_Fix_Y + GC_Fix_Y + BC_Fix_Y
+            WC_Fix_Z = RC_Fix_Z + GC_Fix_Z + BC_Fix_Z
+            WC_Fix_X_sum = WC_Fix_X.sum()
+            WC_Fix_Y_sum = WC_Fix_Y.sum()
+            WC_Fix_Z_sum = WC_Fix_Z.sum()
+            WC_Fix_x = WC_Fix_X_sum / (WC_Fix_X_sum + WC_Fix_Y_sum + WC_Fix_Z_sum)
+            WC_Fix_y = WC_Fix_Y_sum / (WC_Fix_X_sum + WC_Fix_Y_sum + WC_Fix_Z_sum)
+            WC_Fix_T = WC_Fix_Y_sum
+            self.color_table.setItem(2, 1, QTableWidgetItem(f"{WC_Fix_x:.3f}"))
+            self.color_table.setItem(2, 2, QTableWidgetItem(f"{WC_Fix_y:.3f}"))
+            self.color_table.setItem(2, 3, QTableWidgetItem(f"{WC_Fix_T:.3f}%"))
+
+            # NTSCC
+            NTSCC = 100 * 0.5 * abs((RC_Fix_x * GC_Fix_y + GC_Fix_x * BC_Fix_y + BC_Fix_x * RC_Fix_y - (GC_Fix_x * RC_Fix_y) - (
+                        BC_Fix_x * GC_Fix_y) - (RC_Fix_x * BC_Fix_y))) / 0.1582
+            self.color_table.setItem(2, 13, QTableWidgetItem(f"{NTSCC:.3f}%"))
             # 關閉連線
             connection_CIE.close()
 
@@ -1003,6 +1345,117 @@ class Color_Enter(QWidget):
         for item in header_labels:
             self.layer2_box.addItem(str(item))
             #print("item", str(item))
+        # 關閉連線
+        connection.close()
+
+
+    # RCF_Fix
+    def update_RCF_Fix_datatable(self):
+        # 更新 ComboBox 的選項
+        # 在需要更新 ComboBox 的地方呼叫這個函數
+        # 例如，當你新增了新的 table 時，呼叫 updateTableComboBox() 以更新 ComboBox
+        # 連接到 SQLite 資料庫
+        conn = sqlite3.connect("RCF_Fix_spectrum.db")
+        cursor = conn.cursor()
+
+        # 取得所有的 table 名稱
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+
+        # 更新 ComboBox 的選項
+        self.R_fix_table.clear()
+        for table in tables:
+            self.R_fix_table.addItem(table[0])
+
+        # 關閉連線
+        conn.close()
+    def updateRCF_Fix_ComboBox(self):
+        connection = sqlite3.connect("RCF_Fix_spectrum.db")
+        cursor = connection.cursor()
+
+        # 获取表格的標題
+        cursor.execute(f"PRAGMA table_info('{self.R_fix_table.currentText()}');")
+        header_data = cursor.fetchall()
+        header_labels = [column[1] for column in header_data]
+        #print("headerlabels-from source", header_labels)
+        self.R_fix_box.clear()
+        for item in header_labels:
+            self.R_fix_box.addItem(str(item))
+            #print("item", str(item))
+        # 關閉連線
+        connection.close()
+
+    # GCF_Fix
+    def update_GCF_Fix_datatable(self):
+        # 更新 ComboBox 的選項
+        # 在需要更新 ComboBox 的地方呼叫這個函數
+        # 例如，當你新增了新的 table 時，呼叫 updateTableComboBox() 以更新 ComboBox
+        # 連接到 SQLite 資料庫
+        conn = sqlite3.connect("GCF_Fix_spectrum.db")
+        cursor = conn.cursor()
+
+        # 取得所有的 table 名稱
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+
+        # 更新 ComboBox 的選項
+        self.G_fix_table.clear()
+        for table in tables:
+            self.G_fix_table.addItem(table[0])
+
+        # 關閉連線
+        conn.close()
+
+    def updateGCF_Fix_ComboBox(self):
+        connection = sqlite3.connect("GCF_Fix_spectrum.db")
+        cursor = connection.cursor()
+
+        # 获取表格的標題
+        cursor.execute(f"PRAGMA table_info('{self.G_fix_table.currentText()}');")
+        header_data = cursor.fetchall()
+        header_labels = [column[1] for column in header_data]
+        # print("headerlabels-from source", header_labels)
+        self.G_fix_box.clear()
+        for item in header_labels:
+            self.G_fix_box.addItem(str(item))
+            # print("item", str(item))
+        # 關閉連線
+        connection.close()
+
+    # BCF_Fix
+    def update_BCF_Fix_datatable(self):
+        # 更新 ComboBox 的選項
+        # 在需要更新 ComboBox 的地方呼叫這個函數
+        # 例如，當你新增了新的 table 時，呼叫 updateTableComboBox() 以更新 ComboBox
+        # 連接到 SQLite 資料庫
+        conn = sqlite3.connect("BCF_Fix_spectrum.db")
+        cursor = conn.cursor()
+
+        # 取得所有的 table 名稱
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+
+        # 更新 ComboBox 的選項
+        self.B_fix_table.clear()
+        for table in tables:
+            self.B_fix_table.addItem(table[0])
+
+        # 關閉連線
+        conn.close()
+
+    def updateBCF_Fix_ComboBox(self):
+        connection = sqlite3.connect("BCF_Fix_spectrum.db")
+        cursor = connection.cursor()
+
+        # 获取表格的標題
+        cursor.execute(f"PRAGMA table_info('{self.B_fix_table.currentText()}');")
+        header_data = cursor.fetchall()
+        header_labels = [column[1] for column in header_data]
+        # print("headerlabels-from source", header_labels)
+        self.B_fix_box.clear()
+        for item in header_labels:
+            self.B_fix_box.addItem(str(item))
+            # print("item", str(item))
         # 關閉連線
         connection.close()
 

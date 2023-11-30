@@ -6,6 +6,9 @@ from LED_Spectrum import Led_Spectrum
 from CIE1931 import CIE_Spectrum
 from Cell_total import Cell_Spectrum
 from BSITO import BSITO_Spectrum
+from RCF_Fix import RCF_Fix_Spectrum
+from GCF_Fix import GCF_Fix_Spectrum
+from BCF_Fix import BCF_Fix_Spectrum
 
 class Menu(QMainWindow):
     def __init__(self):
@@ -80,6 +83,39 @@ class Menu(QMainWindow):
 
         # 將 page6_layout 設置為 page6 的佈局
         self.page6.setLayout(self.page6_layout)
+
+        # Page7
+        self.page7 = QWidget()  # 創建一個新的 QWidget 實例
+        self.tab_widget.addTab(self.page7, "RCF_Fix_Spectrum")
+        self.page7_table = RCF_Fix_Spectrum()
+
+        self.page7_layout = QVBoxLayout()
+        self.page7_layout.addWidget(self.page7_table)
+
+        # 將 page7_layout 設置為 page7 的佈局
+        self.page7.setLayout(self.page7_layout)
+
+        # Page8
+        self.page8 = QWidget()  # 創建一個新的 QWidget 實例
+        self.tab_widget.addTab(self.page8, "GCF_Fix_Spectrum")
+        self.page8_table = GCF_Fix_Spectrum()
+
+        self.page8_layout = QVBoxLayout()
+        self.page8_layout.addWidget(self.page8_table)
+
+        # 將 page8_layout 設置為 page8 的佈局
+        self.page8.setLayout(self.page8_layout)
+
+        # Page9
+        self.page9 = QWidget()  # 創建一個新的 QWidget 實例
+        self.tab_widget.addTab(self.page9, "BCF_Fix_Spectrum")
+        self.page9_table = BCF_Fix_Spectrum()
+
+        self.page9_layout = QVBoxLayout()
+        self.page9_layout.addWidget(self.page9_table)
+
+        # 將 page9_layout 設置為 page9 的佈局
+        self.page9.setLayout(self.page9_layout)
 
         # 添加选项卡窗口到主窗口
         self.setCentralWidget(self.tab_widget)
