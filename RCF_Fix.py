@@ -65,6 +65,7 @@ class RCF_Fix_Spectrum(QWidget):
         self.export_data_button = QPushButton("Export_excel")
         self.add_column_button = QPushButton("Add_column")
         self.create_data_button = QPushButton("Create_Table")
+        self.table_delete_button = QPushButton("Delete_table")
         # SelectQcombobox
         self.select_db_table = QComboBox()
         self.updateTableComboBox()  # 初始化時更新 ComboBox 選項
@@ -77,6 +78,7 @@ class RCF_Fix_Spectrum(QWidget):
         self.RCF_Fix_Spectrum_layout.addWidget(self.add_column_button, 0, 2)
         self.RCF_Fix_Spectrum_layout.addWidget(self.create_data_button, 1, 0)
         self.RCF_Fix_Spectrum_layout.addWidget(self.select_db_table, 1, 1)
+        self.RCF_Fix_Spectrum_layout.addWidget(self.table_delete_button, 1, 2)
         self.RCF_Fix_Spectrum_layout .addWidget(self.table, 2, 0, 1, 3)
 
         self.setLayout(self.RCF_Fix_Spectrum_layout)
@@ -90,6 +92,7 @@ class RCF_Fix_Spectrum(QWidget):
         self.export_data_button.clicked.connect(self.exportExcelData)
         self.add_column_button.clicked.connect(self.addColumn)
         self.create_data_button.clicked.connect(self.createDatabaseFromTable)
+        self.table_delete_button.clicked.connect(self.delete_table)
 
     def loadExcelData(self):
         # path = "F:\Program-learning\pycharmlearing\Side_project\OPT-color-pyside\測試用頻譜.xlsx"
@@ -184,7 +187,40 @@ class RCF_Fix_Spectrum(QWidget):
 
         # 關閉連線
         conn.close()
+        self.updateTableComboBox()
 
+    def delete_table(self):
+        # 取得現有的資料表
+        conn = sqlite3.connect("RCF_Fix_spectrum.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
+        conn.close()
+
+        # 將元組轉換為字串列表
+        table_names = [table[0] for table in tables]
+
+        # 讓使用者選擇要刪除的資料表
+        table_name, ok = QInputDialog.getItem(self, "選擇要刪除的 Table", "選擇要刪除的 Table", table_names, 0, False)
+
+        if ok and table_name:
+            # 確認使用者的選擇
+            confirm_message = f"確定要刪除資料表 {table_name} 嗎？"
+            reply = QMessageBox.question(self, "確認", confirm_message, QMessageBox.Yes | QMessageBox.No,
+                                         QMessageBox.No)
+
+            if reply == QMessageBox.Yes:
+                # 使用者確認後，執行刪除
+                conn = sqlite3.connect("RCF_Fix_spectrum.db")
+                cursor = conn.cursor()
+                cursor.execute(f"DROP TABLE IF EXISTS '{table_name}';")
+                conn.commit()
+                conn.close()
+
+                # 刷新資料表下拉選單
+                self.updateTableComboBox()
+
+                QMessageBox.information(self, "成功", f"成功刪除資料表 {table_name}", QMessageBox.Ok)
     def exportExcelData(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -329,6 +365,7 @@ class RCF_Fix_Spectrum(QWidget):
             #print("row data", row_data)
         connection.commit()
         connection.close()
+        self.table.resizeColumnsToContents()
 
     def updateTableComboBox(self):
         # 更新 ComboBox 的選項

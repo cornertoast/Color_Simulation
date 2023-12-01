@@ -9,6 +9,9 @@ from BSITO import BSITO_Spectrum
 from RCF_Fix import RCF_Fix_Spectrum
 from GCF_Fix import GCF_Fix_Spectrum
 from BCF_Fix import BCF_Fix_Spectrum
+from RCF_Change import RCF_Change_Spectrum
+from GCF_Change import GCF_Change_Spectrum
+from BCF_Change import BCF_Change_Spectrum
 
 class Menu(QMainWindow):
     def __init__(self):
@@ -42,7 +45,7 @@ class Menu(QMainWindow):
 
         # Page3
         self.page3 = QWidget()  # 創建一個新的 QWidget 實例
-        self.tab_widget.addTab(self.page3, "LED_Spectrum")
+        self.tab_widget.addTab(self.page3, "LED")
         self.page3_table = Led_Spectrum()
 
         self.page3_layout = QVBoxLayout()
@@ -64,7 +67,7 @@ class Menu(QMainWindow):
 
         # Page5
         self.page5 = QWidget()  # 創建一個新的 QWidget 實例
-        self.tab_widget.addTab(self.page5, "Cell_Spectrum")
+        self.tab_widget.addTab(self.page5, "Cell")
         self.page5_table = Cell_Spectrum()
 
         self.page5_layout = QVBoxLayout()
@@ -75,7 +78,7 @@ class Menu(QMainWindow):
 
         # Page6
         self.page6 = QWidget()  # 創建一個新的 QWidget 實例
-        self.tab_widget.addTab(self.page6, "BSITO_Spectrum")
+        self.tab_widget.addTab(self.page6, "BSITO")
         self.page6_table = BSITO_Spectrum()
 
         self.page6_layout = QVBoxLayout()
@@ -86,7 +89,7 @@ class Menu(QMainWindow):
 
         # Page7
         self.page7 = QWidget()  # 創建一個新的 QWidget 實例
-        self.tab_widget.addTab(self.page7, "RCF_Fix_Spectrum")
+        self.tab_widget.addTab(self.page7, "RCF_Fix")
         self.page7_table = RCF_Fix_Spectrum()
 
         self.page7_layout = QVBoxLayout()
@@ -97,7 +100,7 @@ class Menu(QMainWindow):
 
         # Page8
         self.page8 = QWidget()  # 創建一個新的 QWidget 實例
-        self.tab_widget.addTab(self.page8, "GCF_Fix_Spectrum")
+        self.tab_widget.addTab(self.page8, "GCF_Fix")
         self.page8_table = GCF_Fix_Spectrum()
 
         self.page8_layout = QVBoxLayout()
@@ -108,7 +111,7 @@ class Menu(QMainWindow):
 
         # Page9
         self.page9 = QWidget()  # 創建一個新的 QWidget 實例
-        self.tab_widget.addTab(self.page9, "BCF_Fix_Spectrum")
+        self.tab_widget.addTab(self.page9, "BCF_Fix")
         self.page9_table = BCF_Fix_Spectrum()
 
         self.page9_layout = QVBoxLayout()
@@ -116,6 +119,43 @@ class Menu(QMainWindow):
 
         # 將 page9_layout 設置為 page9 的佈局
         self.page9.setLayout(self.page9_layout)
+
+        # Page10
+        self.page10 = QWidget()  # 創建一個新的 QWidget 實例
+        self.tab_widget.addTab(self.page10, "RCF_Change")
+        self.page10_table = RCF_Change_Spectrum()
+
+        self.page10_layout = QVBoxLayout()
+        self.page10_layout.addWidget(self.page10_table)
+
+        # 將 page10_layout 設置為 page11 的佈局
+        self.page10.setLayout(self.page10_layout)
+
+        # Page11
+        self.page11 = QWidget()  # 創建一個新的 QWidget 實例
+        self.tab_widget.addTab(self.page11, "GCF_Change")
+        self.page11_table = GCF_Change_Spectrum()
+
+        self.page11_layout = QVBoxLayout()
+        self.page11_layout.addWidget(self.page11_table)
+
+        # 將 page11_layout 設置為 page11 的佈局
+        self.page11.setLayout(self.page11_layout)
+
+        # Page12
+        self.page12 = QWidget()  # 創建一個新的 QWidget 實例
+        self.tab_widget.addTab(self.page12, "BCF_Change")
+        self.page12_table = BCF_Change_Spectrum()
+
+        self.page12_layout = QVBoxLayout()
+        self.page12_layout.addWidget(self.page12_table)
+
+        # 將 page12_layout 設置為 page12 的佈局
+        self.page12.setLayout(self.page12_layout)
+
+
+
+
 
         # 添加选项卡窗口到主窗口
         self.setCentralWidget(self.tab_widget)

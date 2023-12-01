@@ -38,7 +38,7 @@ class EditableHeader(QHeaderView):
         self.model().setHeaderData(index, self.orientation(), self.edit_line.text())
         self.edit_line.hide()
 
-class GCF_Fix_Spectrum(QWidget):
+class RCF_Change_Spectrum(QWidget):
     def __init__(self):
         super().__init__()
 
@@ -72,16 +72,16 @@ class GCF_Fix_Spectrum(QWidget):
         self.select_db_table.currentIndexChanged.connect(self.tableSelectionChanged)
 
 
-        self.GCF_Fix_Spectrum_layout = QGridLayout()
-        self.GCF_Fix_Spectrum_layout.addWidget(self.import_data_button, 0, 0)
-        self.GCF_Fix_Spectrum_layout.addWidget(self.export_data_button, 0, 1)
-        self.GCF_Fix_Spectrum_layout.addWidget(self.add_column_button, 0, 2)
-        self.GCF_Fix_Spectrum_layout.addWidget(self.create_data_button, 1, 0)
-        self.GCF_Fix_Spectrum_layout.addWidget(self.select_db_table, 1, 1)
-        self.GCF_Fix_Spectrum_layout.addWidget(self.table_delete_button, 1, 2)
-        self.GCF_Fix_Spectrum_layout .addWidget(self.table, 2, 0, 1, 3)
+        self.RCF_Change_Spectrum_layout = QGridLayout()
+        self.RCF_Change_Spectrum_layout.addWidget(self.import_data_button, 0, 0)
+        self.RCF_Change_Spectrum_layout.addWidget(self.export_data_button, 0, 1)
+        self.RCF_Change_Spectrum_layout.addWidget(self.add_column_button, 0, 2)
+        self.RCF_Change_Spectrum_layout.addWidget(self.create_data_button, 1, 0)
+        self.RCF_Change_Spectrum_layout.addWidget(self.select_db_table, 1, 1)
+        self.RCF_Change_Spectrum_layout.addWidget(self.table_delete_button, 1, 2)
+        self.RCF_Change_Spectrum_layout .addWidget(self.table, 2, 0, 1, 3)
 
-        self.setLayout(self.GCF_Fix_Spectrum_layout)
+        self.setLayout(self.RCF_Change_Spectrum_layout)
 
         self.LoadDataBase()
 
@@ -158,7 +158,7 @@ class GCF_Fix_Spectrum(QWidget):
             return
 
         # 創建或連接到 SQLite 資料庫
-        conn = sqlite3.connect("GCF_Fix_spectrum.db")
+        conn = sqlite3.connect("RCF_Change_spectrum.db")
         cursor = conn.cursor()
 
         # 取得表格的標題
@@ -188,9 +188,10 @@ class GCF_Fix_Spectrum(QWidget):
         # 關閉連線
         conn.close()
         self.updateTableComboBox()
+
     def delete_table(self):
         # 取得現有的資料表
-        conn = sqlite3.connect("GCF_Fix_spectrum.db")
+        conn = sqlite3.connect("RCF_Change_spectrum.db")
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
@@ -210,7 +211,7 @@ class GCF_Fix_Spectrum(QWidget):
 
             if reply == QMessageBox.Yes:
                 # 使用者確認後，執行刪除
-                conn = sqlite3.connect("GCF_Fix_spectrum.db")
+                conn = sqlite3.connect("RCF_Change_spectrum.db")
                 cursor = conn.cursor()
                 cursor.execute(f"DROP TABLE IF EXISTS '{table_name}';")
                 conn.commit()
@@ -220,6 +221,7 @@ class GCF_Fix_Spectrum(QWidget):
                 self.updateTableComboBox()
 
                 QMessageBox.information(self, "成功", f"成功刪除資料表 {table_name}", QMessageBox.Ok)
+
     def exportExcelData(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -333,16 +335,16 @@ class GCF_Fix_Spectrum(QWidget):
 
 
     def LoadDataBase(self):
-        connection = sqlite3.connect("GCF_Fix_spectrum.db")
+        connection = sqlite3.connect("RCF_Change_spectrum.db")
         cursor = connection.cursor()
         # 確保表格存在
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='GCF_Fix';")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='RCF_Change';")
         if cursor.fetchone() is None:
             connection.close()
             return  # 如果表格不存在，直接返回
 
         # 獲取表格的標題
-        cursor.execute("PRAGMA table_info(GCF_Fix);")
+        cursor.execute("PRAGMA table_info(RCF_Change);")
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
 
@@ -352,7 +354,7 @@ class GCF_Fix_Spectrum(QWidget):
         self.table.setHorizontalHeaderLabels(header_labels)
 
         # 獲取表格數據
-        result = connection.execute("SELECT * FROM GCF_Fix")
+        result = connection.execute("SELECT * FROM RCF_Change")
 
         for row_number, row_data in enumerate(result):
             self.table.insertRow(row_number)
@@ -371,7 +373,7 @@ class GCF_Fix_Spectrum(QWidget):
         # 在需要更新 ComboBox 的地方呼叫這個函數
         # 例如，當你新增了新的 table 時，呼叫 updateTableComboBox() 以更新 ComboBox
         # 連接到 SQLite 資料庫
-        conn = sqlite3.connect("GCF_Fix_spectrum.db")
+        conn = sqlite3.connect("RCF_Change_spectrum.db")
         cursor = conn.cursor()
 
         # 取得所有的 table 名稱
@@ -395,7 +397,7 @@ class GCF_Fix_Spectrum(QWidget):
 
     def loadTableData(self, table_name):
         # 在這裡加入載入資料的程式碼，將選擇的資料表的內容更新到 widget_table
-        connection = sqlite3.connect("GCF_Fix_spectrum.db")
+        connection = sqlite3.connect("RCF_Change_spectrum.db")
         cursor = connection.cursor()
         # 確保表格存在
         cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';")
