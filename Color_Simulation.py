@@ -12,6 +12,13 @@ from Light_Source_BLU import *
 import pandas as pd
 import math
 import numpy as np
+from colour import xy_to_XYZ, XYZ_to_sRGB, CCS_ILLUMINANTS
+from colour.plotting import plot_chromaticity_diagram_CIE1931, plot_single_colour_swatch
+import colour
+from colour.plotting import *
+from colour import sd_single_led, plotting
+from colour import sd_blackbody, SpectralShape
+
 
 
 class Color_Simulation(QWidget):
@@ -554,6 +561,7 @@ class Color_Enter(QWidget):
 
         # self.refresh.clicked.connect(self.update_all_data_table)
         self.calculate.clicked.connect(self.calculate_color_customize)
+        self.test_button.clicked.connect(self.drawcie)
 
         # widget放置
         # color table
@@ -1429,11 +1437,11 @@ class Color_Enter(QWidget):
             R_X_sum = R_X.sum()
             R_Y_sum = R_Y.sum()
             R_Z_sum = R_Z.sum()
-            R_x = R_X_sum / (R_X_sum + R_Y_sum + R_Z_sum)
-            R_y = R_Y_sum / (R_X_sum + R_Y_sum + R_Z_sum)
+            self.R_x = R_X_sum / (R_X_sum + R_Y_sum + R_Z_sum)
+            self.R_y = R_Y_sum / (R_X_sum + R_Y_sum + R_Z_sum)
             R_T = R_Y_sum * 3
-            self.color_table.setItem(1, 4, QTableWidgetItem(f"{R_x:.3f}"))
-            self.color_table.setItem(1, 5, QTableWidgetItem(f"{R_y:.3f}"))
+            self.color_table.setItem(1, 4, QTableWidgetItem(f"{self.R_x:.3f}"))
+            self.color_table.setItem(1, 5, QTableWidgetItem(f"{self.R_y:.3f}"))
             self.color_table.setItem(1, 6, QTableWidgetItem(f"{R_T:.3f}%"))
 
             # G_Fix & GAK
@@ -1444,11 +1452,11 @@ class Color_Enter(QWidget):
             G_X_sum = G_X.sum()
             G_Y_sum = G_Y.sum()
             G_Z_sum = G_Z.sum()
-            G_x = G_X_sum / (G_X_sum + G_Y_sum + G_Z_sum)
-            G_y = G_Y_sum / (G_X_sum + G_Y_sum + G_Z_sum)
+            self.G_x = G_X_sum / (G_X_sum + G_Y_sum + G_Z_sum)
+            self.G_y = G_Y_sum / (G_X_sum + G_Y_sum + G_Z_sum)
             G_T = G_Y_sum * 3
-            self.color_table.setItem(1, 7, QTableWidgetItem(f"{G_x:.3f}"))
-            self.color_table.setItem(1, 8, QTableWidgetItem(f"{G_y:.3f}"))
+            self.color_table.setItem(1, 7, QTableWidgetItem(f"{self.G_x:.3f}"))
+            self.color_table.setItem(1, 8, QTableWidgetItem(f"{self.G_y:.3f}"))
             self.color_table.setItem(1, 9, QTableWidgetItem(f"{G_T:.3f}%"))
 
             # B_Fix & BAK
@@ -1459,11 +1467,11 @@ class Color_Enter(QWidget):
             B_X_sum = B_X.sum()
             B_Y_sum = B_Y.sum()
             B_Z_sum = B_Z.sum()
-            B_x = B_X_sum / (B_X_sum + B_Y_sum + B_Z_sum)
-            B_y = B_Y_sum / (B_X_sum + B_Y_sum + B_Z_sum)
+            self.B_x = B_X_sum / (B_X_sum + B_Y_sum + B_Z_sum)
+            self.B_y = B_Y_sum / (B_X_sum + B_Y_sum + B_Z_sum)
             B_T = B_Y_sum * 3
-            self.color_table.setItem(1, 10, QTableWidgetItem(f"{B_x:.3f}"))
-            self.color_table.setItem(1, 11, QTableWidgetItem(f"{B_y:.3f}"))
+            self.color_table.setItem(1, 10, QTableWidgetItem(f"{self.B_x:.3f}"))
+            self.color_table.setItem(1, 11, QTableWidgetItem(f"{self.B_y:.3f}"))
             self.color_table.setItem(1, 12, QTableWidgetItem(f"{B_T:.3f}%"))
 
             # W
@@ -1473,15 +1481,15 @@ class Color_Enter(QWidget):
             W_X_sum = W_X.sum()
             W_Y_sum = W_Y .sum()
             W_Z_sum = W_Z.sum()
-            W_x = W_X_sum / (W_X_sum + W_Y_sum + W_Z_sum)
-            W_y = W_Y_sum / (W_X_sum + W_Y_sum + W_Z_sum)
+            self.W_x = W_X_sum / (W_X_sum + W_Y_sum + W_Z_sum)
+            self.W_y = W_Y_sum / (W_X_sum + W_Y_sum + W_Z_sum)
             W_T = W_Y_sum
-            self.color_table.setItem(1, 1, QTableWidgetItem(f"{W_x:.3f}"))
-            self.color_table.setItem(1, 2, QTableWidgetItem(f"{W_y:.3f}"))
+            self.color_table.setItem(1, 1, QTableWidgetItem(f"{self.W_x:.3f}"))
+            self.color_table.setItem(1, 2, QTableWidgetItem(f"{self.W_y:.3f}"))
             self.color_table.setItem(1, 3, QTableWidgetItem(f"{W_T:.3f}%"))
 
             #NTSC
-            NTSC = 100 * 0.5 * abs((R_x * G_y + G_x * B_y + B_x * R_y-(G_x * R_y)-(B_x * G_y)-(R_x*B_y)))/ 0.1582
+            NTSC = 100 * 0.5 * abs((self.R_x * self.G_y + self.G_x * self.B_y + self.B_x * self.R_y-(self.G_x * self.R_y)-(self.B_x * self.G_y)-(self.R_x*self.B_y)))/ 0.1582
             self.color_table.setItem(1, 13, QTableWidgetItem(f"{NTSC:.3f}%"))
 
             # Clight +Cell part
@@ -1553,6 +1561,48 @@ class Color_Enter(QWidget):
             self.color_table.setItem(2, 13, QTableWidgetItem(f"{NTSCC:.3f}%"))
             # 關閉連線
             connection_CIE.close()
+
+    # Plot CIE
+    def drawcie(self):
+        # 4組 x 和 y 色座標
+        x_coords = [self.W_x, self.R_x, self.G_x, self.B_x]
+        y_coords = [self.W_y, self.R_y, self.G_y, self.B_y]
+
+        # 轉換為 numpy array
+        x_coords_array = np.array(x_coords)
+        y_coords_array = np.array(y_coords)
+
+        # 將 xy 座標轉換為 CIE 1931 XYZ 三刺激值
+        XYZ = xy_to_XYZ(np.column_stack((x_coords_array, y_coords_array)))
+
+        # 將 XYZ 三刺激值轉換為 sRGB 顏色表示
+        RGB = XYZ_to_sRGB(XYZ)
+
+        # 顯示座標的顏色
+        # show=False 控制是否顯示即時的繪圖，當你設置 show=False 時，繪圖將不會立即顯示在畫面上，你可以在需要顯示的時候調用 plt.show()。
+        # 這樣可以讓你在繪製多個圖形時先完成所有的繪製操作再顯示，以提高效率。
+        for i in range(len(x_coords)):
+            XYZ = xy_to_XYZ(np.array([x_coords[i], y_coords[i]]))
+            RGB = XYZ_to_sRGB(XYZ)
+            plot_single_colour_swatch(RGB, swatch_name=f"Color {i + 1}", xy=(x_coords[i], y_coords[i]), show=False)
+
+        # 顯示對應的顏色在 CIE 1931 色度圖上
+        plotting.models.plot_RGB_chromaticities_in_chromaticity_diagram(RGB, show=False)
+
+        # 使用 plt.scatter 添加自定義的標記
+        markers = ['o', 's', '^','*']  # 可以根據需要更改標記形狀
+        labels = ['W','R','G','B']
+        # 設定外框的顏色為黑色
+        edgecolors = 'black'
+        # 定義每個標記的顏色，這裡使用RGB表示，你可以根據需要調整顏色值
+        colors = [(1, 1, 1), (1, 0, 0), (0, 1, 0), (0, 0, 1)]
+        for x, y, marker, label, color in zip(x_coords, y_coords, markers, labels, colors):
+            plt.scatter(x, y, marker=marker, label=f'{label}:({x:.2f}, {y:.2f})', color=color,edgecolors=edgecolors)
+
+        # 顯示圖例
+        plt.legend()
+        # 顯示圖形
+        plt.show()
 
 
 
