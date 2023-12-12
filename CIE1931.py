@@ -120,12 +120,28 @@ class CIE_Spectrum(QWidget):
         # header_row_str = ', '.join(f'"{header}" TEXT' for header in header_row_values)
 
         for value_tuple in list_values[1:]:
-            #print(value_tuple)
-            if len(value_tuple) <= self.table.columnCount():  # 檢查欄數是否超過預期
-                col_index = 0
-                for value in value_tuple:
-                    self.table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
-                    col_index += 1
+            col_index = 0
+            for value in value_tuple:
+                if value is None:
+                    # 如果值為 None，直接設定到表格中
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(""))
+                    print(f"Value: None")
+                elif isinstance(value, str):
+                    # 如果是字串，直接設定到表格中
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(value))
+                    print(f"Value (String): {value}")
+                else:
+                    # 將讀取到的數字轉為浮點數
+                    float_value = float(value)
+
+                    # 將數字限制到小數點後15位
+                    rounded_value = round(float_value, 15)
+
+                    # 將數字轉為字串，並設定到表格中
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(str(rounded_value)))
+                    print(f"Value (Float): {rounded_value}")
+
+                col_index += 1
             row_index += 1
         # # 創建或連接到 SQLite 資料庫
         # db_path = "blu_database.db"

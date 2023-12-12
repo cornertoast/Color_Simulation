@@ -17,6 +17,7 @@ import pandas as pd
 
 
 
+
 class EditableHeader(QHeaderView):
     def __init__(self, orientation, parent):
         super().__init__(orientation, parent)
@@ -31,10 +32,15 @@ class EditableHeader(QHeaderView):
 
     def mouseDoubleClickEvent(self, event):
         index = self.logicalIndexAt(event.pos())
-        self.edit_line.setGeometry(self.sectionViewportPosition(index), 0, self.sectionSize(index), self.height())
-        self.edit_line.setText(self.model().headerData(index, self.orientation()))
-        self.edit_line.show()
-        self.edit_line.setFocus()
+        header_item = self.parent().horizontalHeaderItem(index)  # 使用 parent() 獲取 QTableWidget 的實例
+
+        if header_item:
+            # 檢查是否存在表頭項目
+            text = header_item.text()
+            self.edit_line.setGeometry(self.sectionViewportPosition(index), 0, self.sectionSize(index), self.height())
+            self.edit_line.setText(text)
+            self.edit_line.show()
+            self.edit_line.setFocus()
 
     def commitEdit(self):
         index = self.logicalIndexAt(self.edit_line.pos())
@@ -72,8 +78,11 @@ class Light_Source_BLU(QWidget):
         self.add_column_button = QPushButton("Add_column")
         self.create_data_button = QPushButton("Create_Table")
         self.table_delete_button = QPushButton("Delete_table")
+        self.Form_clear_button = QPushButton("Form_clear")
+        self.delete_column_button = QPushButton("Delete Column")
         # SelectQcombobox
         self.select_db_table = QComboBox()
+        self.select_db_table.setStyleSheet(QCOMBOBOXTABLESELECT)
         self.updateTableComboBox()  # 初始化時更新 ComboBox 選項
         self.select_db_table.currentIndexChanged.connect(self.tableSelectionChanged)
 
@@ -83,11 +92,13 @@ class Light_Source_BLU(QWidget):
         self.Light_Source_BLU_button_layout = QGridLayout()
         self.Light_Source_BLU_button_layout.addWidget(self.import_data_button,0,0)
         self.Light_Source_BLU_button_layout.addWidget(self.export_data_button,0,1)
-        self.Light_Source_BLU_button_layout.addWidget(self.add_column_button,0,2)
+        self.Light_Source_BLU_button_layout.addWidget(self.Form_clear_button, 0, 2)
         self.Light_Source_BLU_button_layout.addWidget(self.create_data_button,1,0)
-        self.Light_Source_BLU_button_layout.addWidget(self.select_db_table,1,1)
-        self.Light_Source_BLU_button_layout.addWidget(self.table_delete_button,1,2)
-        self.Light_Source_BLU_button_layout .addWidget(self.table,2,0,1,3)
+        self.Light_Source_BLU_button_layout.addWidget(self.table_delete_button,1,1)
+        self.Light_Source_BLU_button_layout.addWidget(self.select_db_table, 1, 2)
+        self.Light_Source_BLU_button_layout.addWidget(self.add_column_button, 2, 0)
+        self.Light_Source_BLU_button_layout.addWidget(self.delete_column_button,2,1)
+        self.Light_Source_BLU_button_layout .addWidget(self.table,3,0,1,3)
 
         self.setLayout(self.Light_Source_BLU_button_layout)
 
@@ -101,6 +112,8 @@ class Light_Source_BLU(QWidget):
         self.add_column_button.clicked.connect(self.addColumn)
         self.create_data_button.clicked.connect(self.createDatabaseFromTable)
         self.table_delete_button.clicked.connect(self.delete_table)
+        self.Form_clear_button.clicked.connect(self.clearForm)
+        self.delete_column_button.clicked.connect(self.deleteColumn)
 
     def loadExcelData(self):
         # path = "F:\Program-learning\pycharmlearing\Side_project\OPT-color-pyside\測試用頻譜.xlsx"
@@ -135,6 +148,8 @@ class Light_Source_BLU(QWidget):
                     self.table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
                     col_index += 1
             row_index += 1
+
+        self.createDatabaseFromTable()
 
 
         # # 創建或連接到 SQLite 資料庫
@@ -171,6 +186,23 @@ class Light_Source_BLU(QWidget):
         conn = sqlite3.connect("blu_database.db")
         cursor = conn.cursor()
 
+        # 檢查表格是否存在
+        cursor.execute(f'SELECT name FROM sqlite_master WHERE type="table" AND name=?;', (table_name,))
+        existing_table = cursor.fetchone()
+
+        if existing_table:
+            # 如果表格存在，顯示確認對話框
+            reply = QMessageBox.question(self, "確認覆蓋", f"已存在名稱為 '{table_name}' 的表格，是否確認覆蓋？",
+                                         QMessageBox.Yes | QMessageBox.No)
+
+            if reply == QMessageBox.No:
+                # 使用者取消覆蓋，結束函數
+                conn.close()
+                return
+            else:
+                # 使用者確認覆蓋，刪除現有表格
+                cursor.execute(f'DROP TABLE IF EXISTS "{table_name}";')
+
         # 取得表格的標題
         header_items = [self.table.horizontalHeaderItem(i).text() if self.table.horizontalHeaderItem(
             i) is not None else f'Column{i}' for i in range(self.table.columnCount())]
@@ -198,6 +230,13 @@ class Light_Source_BLU(QWidget):
         # 關閉連線
         conn.close()
         self.updateTableComboBox()
+
+    def deleteColumn(self):
+        # 刪除最後一列
+        current_column_count = self.table.columnCount()
+
+        if current_column_count > 0:
+            self.table.removeColumn(current_column_count - 1)
 
     def delete_table(self):
         # 取得現有的資料表
@@ -232,6 +271,10 @@ class Light_Source_BLU(QWidget):
 
                 QMessageBox.information(self, "成功", f"成功刪除資料表 {table_name}", QMessageBox.Ok)
 
+    def clearForm(self):
+        # 清除整個表格的內容
+        self.table.clearContents()
+
     def exportExcelData(self):
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
@@ -265,7 +308,22 @@ class Light_Source_BLU(QWidget):
         # 新增表格欄位
         self.table.insertColumn(current_column_count)
 
-        # # 創建或連接到 SQLite 資料庫
+        # 新增對應的表頭
+        new_header_item = QTableWidgetItem(f"Column{current_column_count}")
+        self.table.setHorizontalHeaderItem(current_column_count, new_header_item)
+
+        # 進行表頭編輯
+        self.table.horizontalHeader().edit_line.setGeometry(
+            self.table.horizontalHeader().sectionViewportPosition(current_column_count),
+            0,
+            self.table.horizontalHeader().sectionSize(current_column_count),
+            self.table.horizontalHeader().height()
+        )
+        self.table.horizontalHeader().edit_line.setText(new_header_item.text())
+        self.table.horizontalHeader().edit_line.show()
+        self.table.horizontalHeader().edit_line.setFocus()
+
+    # # 創建或連接到 SQLite 資料庫
         # db_path = "blu_1e.db"
         # conn = sqlite3.connect(db_path)
         # cursor = conn.cursor()

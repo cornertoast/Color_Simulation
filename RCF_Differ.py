@@ -14,6 +14,8 @@ from Setting import *
 import chardet
 import openpyxl
 import pandas as pd
+from decimal import Decimal, InvalidOperation
+from decimal import Decimal, ROUND_HALF_UP
 
 class EditableHeader(QHeaderView):
     def __init__(self, orientation, parent):
@@ -38,7 +40,7 @@ class EditableHeader(QHeaderView):
         self.model().setHeaderData(index, self.orientation(), self.edit_line.text())
         self.edit_line.hide()
 
-class RCF_Change_Spectrum(QWidget):
+class RCF_Differ_Spectrum(QWidget):
     def __init__(self):
         super().__init__()
 
@@ -72,16 +74,16 @@ class RCF_Change_Spectrum(QWidget):
         self.select_db_table.currentIndexChanged.connect(self.tableSelectionChanged)
 
 
-        self.RCF_Change_Spectrum_layout = QGridLayout()
-        self.RCF_Change_Spectrum_layout.addWidget(self.import_data_button, 0, 0)
-        self.RCF_Change_Spectrum_layout.addWidget(self.export_data_button, 0, 1)
-        self.RCF_Change_Spectrum_layout.addWidget(self.add_column_button, 0, 2)
-        self.RCF_Change_Spectrum_layout.addWidget(self.create_data_button, 1, 0)
-        self.RCF_Change_Spectrum_layout.addWidget(self.select_db_table, 1, 1)
-        self.RCF_Change_Spectrum_layout.addWidget(self.table_delete_button, 1, 2)
-        self.RCF_Change_Spectrum_layout .addWidget(self.table, 2, 0, 1, 3)
+        self.RCF_Differ_Spectrum_layout = QGridLayout()
+        self.RCF_Differ_Spectrum_layout.addWidget(self.import_data_button, 0, 0)
+        self.RCF_Differ_Spectrum_layout.addWidget(self.export_data_button, 0, 1)
+        self.RCF_Differ_Spectrum_layout.addWidget(self.add_column_button, 0, 2)
+        self.RCF_Differ_Spectrum_layout.addWidget(self.create_data_button, 1, 0)
+        self.RCF_Differ_Spectrum_layout.addWidget(self.select_db_table, 1, 1)
+        self.RCF_Differ_Spectrum_layout.addWidget(self.table_delete_button, 1, 2)
+        self.RCF_Differ_Spectrum_layout .addWidget(self.table, 2, 0, 1, 3)
 
-        self.setLayout(self.RCF_Change_Spectrum_layout)
+        self.setLayout(self.RCF_Differ_Spectrum_layout)
 
         self.LoadDataBase()
 
@@ -93,6 +95,16 @@ class RCF_Change_Spectrum(QWidget):
         self.add_column_button.clicked.connect(self.addColumn)
         self.create_data_button.clicked.connect(self.createDatabaseFromTable)
         self.table_delete_button.clicked.connect(self.delete_table)
+
+    def determine_decimal_places(self, value):
+        if value is not None:
+            try:
+                float_value = float(value)
+                return len(str(float_value).split(".")[1])
+            except (ValueError, IndexError):
+                return 0
+        else:
+            return 0
 
     def loadExcelData(self):
         # path = "F:\Program-learning\pycharmlearing\Side_project\OPT-color-pyside\測試用頻譜.xlsx"
@@ -120,12 +132,28 @@ class RCF_Change_Spectrum(QWidget):
         # header_row_str = ', '.join(f'"{header}" TEXT' for header in header_row_values)
 
         for value_tuple in list_values[1:]:
-            #print(value_tuple)
-            if len(value_tuple) <= self.table.columnCount():  # 檢查欄數是否超過預期
-                col_index = 0
-                for value in value_tuple:
-                    self.table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
-                    col_index += 1
+            col_index = 0
+            for value in value_tuple:
+                if value is None:
+                    # 如果值為 None，直接設定到表格中
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(""))
+                    print(f"Value: None")
+                elif isinstance(value, str):
+                    # 如果是字串，直接設定到表格中
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(value))
+                    print(f"Value (String): {value}")
+                else:
+                    # 將讀取到的數字轉為浮點數
+                    float_value = float(value)
+
+                    # 將數字限制到小數點後15位
+                    rounded_value = round(float_value, 15)
+
+                    # 將數字轉為字串，並設定到表格中
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(str(rounded_value)))
+                    print(f"Value (Float): {rounded_value}")
+
+                col_index += 1
             row_index += 1
         # # 創建或連接到 SQLite 資料庫
         # db_path = "blu_database.db"
@@ -158,7 +186,7 @@ class RCF_Change_Spectrum(QWidget):
             return
 
         # 創建或連接到 SQLite 資料庫
-        conn = sqlite3.connect("RCF_Change_spectrum.db")
+        conn = sqlite3.connect("RCF_Differ_spectrum.db")
         cursor = conn.cursor()
 
         # 取得表格的標題
@@ -191,7 +219,7 @@ class RCF_Change_Spectrum(QWidget):
 
     def delete_table(self):
         # 取得現有的資料表
-        conn = sqlite3.connect("RCF_Change_spectrum.db")
+        conn = sqlite3.connect("RCF_Differ_spectrum.db")
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tables = cursor.fetchall()
@@ -211,7 +239,7 @@ class RCF_Change_Spectrum(QWidget):
 
             if reply == QMessageBox.Yes:
                 # 使用者確認後，執行刪除
-                conn = sqlite3.connect("RCF_Change_spectrum.db")
+                conn = sqlite3.connect("RCF_Differ_spectrum.db")
                 cursor = conn.cursor()
                 cursor.execute(f"DROP TABLE IF EXISTS '{table_name}';")
                 conn.commit()
@@ -335,16 +363,16 @@ class RCF_Change_Spectrum(QWidget):
 
 
     def LoadDataBase(self):
-        connection = sqlite3.connect("RCF_Change_spectrum.db")
+        connection = sqlite3.connect("RCF_Differ_spectrum.db")
         cursor = connection.cursor()
         # 確保表格存在
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='RCF_Change';")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='RCF_Differ';")
         if cursor.fetchone() is None:
             connection.close()
             return  # 如果表格不存在，直接返回
 
         # 獲取表格的標題
-        cursor.execute("PRAGMA table_info(RCF_Change);")
+        cursor.execute("PRAGMA table_info(RCF_Differ);")
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
 
@@ -354,7 +382,7 @@ class RCF_Change_Spectrum(QWidget):
         self.table.setHorizontalHeaderLabels(header_labels)
 
         # 獲取表格數據
-        result = connection.execute("SELECT * FROM RCF_Change")
+        result = connection.execute("SELECT * FROM RCF_Differ")
 
         for row_number, row_data in enumerate(result):
             self.table.insertRow(row_number)
@@ -366,14 +394,14 @@ class RCF_Change_Spectrum(QWidget):
             #print("row data", row_data)
         connection.commit()
         connection.close()
-        self.table.resizeColumnsToContents()
+        #self.table.resizeColumnsToContents()
 
     def updateTableComboBox(self):
         # 更新 ComboBox 的選項
         # 在需要更新 ComboBox 的地方呼叫這個函數
         # 例如，當你新增了新的 table 時，呼叫 updateTableComboBox() 以更新 ComboBox
         # 連接到 SQLite 資料庫
-        conn = sqlite3.connect("RCF_Change_spectrum.db")
+        conn = sqlite3.connect("RCF_Differ_spectrum.db")
         cursor = conn.cursor()
 
         # 取得所有的 table 名稱
@@ -405,7 +433,7 @@ class RCF_Change_Spectrum(QWidget):
 
     def loadTableData(self, table_name):
         # 在這裡加入載入資料的程式碼，將選擇的資料表的內容更新到 widget_table
-        connection = sqlite3.connect("RCF_Change_spectrum.db")
+        connection = sqlite3.connect("RCF_Differ_spectrum.db")
         cursor = connection.cursor()
         # 確保表格存在
         cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}';")
