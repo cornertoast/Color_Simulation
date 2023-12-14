@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QGridLayout, \
     QFormLayout, QLineEdit, QTabWidget, QTableWidgetItem, QTableWidget, QSizePolicy, QFrame, \
-    QPushButton, QAbstractItemView, QComboBox, QPushButton, QCheckBox
+    QPushButton, QAbstractItemView, QComboBox, QPushButton, QCheckBox,QApplication,QDialog
 from PySide6.QtGui import QKeyEvent, QColor, QPalette, QFont, QMouseEvent,QShortcut,QKeySequence,QClipboard
 from PySide6.QtCore import Qt
 from PySide6.QtCharts import QChart
@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sqlite3
 from Setting import *
-from Light_Source_BLU import *
+# from Light_Source_BLU import *
 import pandas as pd
 import math
 import numpy as np
@@ -20,6 +20,7 @@ from colour import sd_single_led, plotting
 from colour import sd_blackbody, SpectralShape
 from matplotlib.figure import Figure
 import re
+from signal_manager import global_signal_manager
 
 
 
@@ -95,9 +96,9 @@ class Color_Enter(QWidget):
         # color_table區
         self.color_table = QTableWidget()
         self.color_table.setColumnCount(16)
-        self.color_table.setHorizontalHeaderLabels(["項目", "Light", "背光名稱", "背光名稱", "CF/T", "R-CF 名稱",
-                                                    "厚度", "CF/T", "G-CF名稱", "厚度", "CF/T", "B-CF名稱",
-                                                    "厚度", "NTSC%", "BLU", "BLU"])
+        self.color_table.setHorizontalHeaderLabels(["項目", "Wx", "Wy", "WT", "Rx", "Ry",
+                                                    "RT", "Gx", "Gy", "GT", "Bx", "By",
+                                                    "BT", "NTSC%", "BLUx", "BLUy"])
         # 添加初始的行
         self.color_table.setRowCount(3)
 
@@ -160,13 +161,11 @@ class Color_Enter(QWidget):
         self.light_source.setStyleSheet(QCOMBOBOXDISABLE)
         self.light_source_datatable.setStyleSheet(QCOMBOBOXDISABLE)
 
-
         # 更新light_source_table
         self.update_light_source_datatable()
         # 觸發table更新,lightsource表單
         self.updateLightSourceComboBox()  # 初始化
         self.light_source_datatable.currentIndexChanged.connect(self.updateLightSourceComboBox)
-
 
         # 觸發計算連動
         self.light_source_mode.currentIndexChanged.connect(self.calculate_color_customize)
@@ -199,8 +198,11 @@ class Color_Enter(QWidget):
         self.light_source_led = QComboBox()
         self.light_source_led_datatable = QComboBox()
         self.light_source_led_datatable.setStyleSheet(QCOMBOBOXTABLESELECT)
-        # 設定當前選中項目的文字顏色
-        self.light_source_led.setStyleSheet(QCOMBOXSETTING)
+        # 防呆反灰設定
+        self.light_source_led.setEnabled(False)
+        self.light_source_led_datatable.setEnabled(False)
+        self.light_source_led.setStyleSheet(QCOMBOBOXDISABLE)
+        self.light_source_led_datatable.setStyleSheet(QCOMBOBOXDISABLE)
         # 更新light_source_led_table
         self.update_light_source_led_datatable()
         # 觸發table更新,lightsource_led表單
@@ -212,12 +214,22 @@ class Color_Enter(QWidget):
         # 觸發CIE圖
         self.light_source_led.currentIndexChanged.connect(self.drawciechart)
         self.light_source_led_datatable.currentIndexChanged.connect(self.drawciechart)
+        # 觸發Sample圖
+        self.light_source_led.currentIndexChanged.connect(self.drawcie_WRGB_samplechart)
+        self.light_source_led_datatable.currentIndexChanged.connect(self.drawcie_WRGB_samplechart)
+        # 觸發dialog_table
+        self.light_source_led.currentIndexChanged.connect(self.set_wave_p)
+        self.light_source_led_datatable.currentIndexChanged.connect(self.set_wave_p)
+
 
         self.source_led = QComboBox()
         self.source_led_datatable = QComboBox()
         self.source_led_datatable.setStyleSheet(QCOMBOBOXTABLESELECT)
-        # 設定當前選中項目的文字顏色
-        self.source_led.setStyleSheet(QCOMBOXSETTING)
+        # 防呆反灰設定
+        self.source_led .setEnabled(False)
+        self.source_led_datatable.setEnabled(False)
+        self.source_led .setStyleSheet(QCOMBOBOXDISABLE)
+        self.source_led_datatable.setStyleSheet(QCOMBOBOXDISABLE)
         # 更新source_led_table
         self.update_source_led_datatable()
         # 觸發table更新,lightsource_led表單
@@ -256,13 +268,16 @@ class Color_Enter(QWidget):
         self.layer1_box = QComboBox()
         # layer1_table
         self.layer1_table = QComboBox()
-        self.layer1_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+
         self.update_layer1_datatable()
         # 觸發layer1 table
         self.updatelayer1ComboBox()  # 初始化
         self.layer1_table.currentIndexChanged.connect(self.updatelayer1ComboBox)
-        # 設定當前選中項目的文字顏色
-        self.layer1_box.setStyleSheet(QCOMBOXSETTING)
+        # 防呆反灰設定
+        self.layer1_box.setEnabled(False)
+        self.layer1_table.setEnabled(False)
+        self.layer1_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.layer1_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發計算連動
         self.layer1_mode.currentIndexChanged.connect(self.calculate_color_customize)
         self.layer1_box.currentIndexChanged.connect(self.calculate_color_customize)
@@ -292,13 +307,15 @@ class Color_Enter(QWidget):
         self.layer2_box = QComboBox()
         # layer2_table
         self.layer2_table = QComboBox()
-        self.layer2_table.setStyleSheet(QCOMBOBOXTABLESELECT)
         self.update_layer2_datatable()
         # 觸發layer2 table
         self.updatelayer2ComboBox()  # 初始化
         self.layer2_table.currentIndexChanged.connect(self.updatelayer2ComboBox)
-        # 設定當前選中項目的文字顏色
-        self.layer2_box.setStyleSheet(QCOMBOXSETTING)
+        # 防呆反灰設定
+        self.layer2_box.setEnabled(False)
+        self.layer2_table.setEnabled(False)
+        self.layer2_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.layer2_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 計算觸發連動
         self.layer2_mode.currentIndexChanged.connect(self.calculate_color_customize)
         self.layer2_box.currentIndexChanged.connect(self.calculate_color_customize)
@@ -325,12 +342,14 @@ class Color_Enter(QWidget):
         self.label_layer3 = QLabel("Layer_3")
         self.label_layer3.setFont(font)
         self.layer3_box = QComboBox()
-        # 設定當前選中項目的文字顏色
-        self.layer3_box.setStyleSheet(QCOMBOXSETTING)
         # layer3 table
         self.layer3_table = QComboBox()
-        self.layer3_table.setStyleSheet(QCOMBOBOXTABLESELECT)
         self.update_layer3_datatable()
+        # 防呆反灰設定
+        self.layer3_box.setEnabled(False)
+        self.layer3_table.setEnabled(False)
+        self.layer3_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.layer3_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發layer3 table
         self.updatelayer3ComboBox()  # 初始化
         self.layer3_table.currentIndexChanged.connect(self.updatelayer3ComboBox)
@@ -360,11 +379,14 @@ class Color_Enter(QWidget):
         self.label_layer4 = QLabel("Layer_4")
         self.label_layer4.setFont(font)
         self.layer4_box = QComboBox()
-        self.layer4_box.setStyleSheet(QCOMBOXSETTING)
         # layer4 table
         self.layer4_table = QComboBox()
-        self.layer4_table.setStyleSheet(QCOMBOBOXTABLESELECT)
         self.update_layer4_datatable()
+        # 防呆反灰設定
+        self.layer4_box.setEnabled(False)
+        self.layer4_table.setEnabled(False)
+        self.layer4_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.layer4_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發layer4 table
         self.updatelayer4ComboBox()  # 初始化
         self.layer4_table.currentIndexChanged.connect(self.updatelayer4ComboBox)
@@ -394,12 +416,14 @@ class Color_Enter(QWidget):
         self.label_layer5 = QLabel("Layer_5")
         self.label_layer5.setFont(font)
         self.layer5_box = QComboBox()
-        # 設定當前選中項目的文字顏色
-        self.layer5_box.setStyleSheet(QCOMBOXSETTING)
         # layer5 table
         self.layer5_table = QComboBox()
-        self.layer5_table.setStyleSheet(QCOMBOBOXTABLESELECT)
         self.update_layer5_datatable()
+        # 防呆反灰設定
+        self.layer5_box.setEnabled(False)
+        self.layer5_table.setEnabled(False)
+        self.layer5_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.layer5_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發layer5 table
         self.updatelayer5ComboBox()  # 初始化
         self.layer5_table.currentIndexChanged.connect(self.updatelayer5ComboBox)
@@ -429,12 +453,14 @@ class Color_Enter(QWidget):
         self.label_layer6 = QLabel("Layer_6")
         self.label_layer6.setFont(font)
         self.layer6_box = QComboBox()
-        # 設定當前選中項目的文字顏色
-        self.layer6_box.setStyleSheet(QCOMBOXSETTING)
         # layer6 table
         self.layer6_table = QComboBox()
-        self.layer6_table.setStyleSheet(QCOMBOBOXTABLESELECT)
         self.update_layer6_datatable()
+        # 防呆反灰設定
+        self.layer6_box.setEnabled(False)
+        self.layer6_table.setEnabled(False)
+        self.layer6_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.layer6_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發layer6 table
         self.updatelayer6ComboBox()  # 初始化
         self.layer6_table.currentIndexChanged.connect(self.updatelayer6ComboBox)
@@ -466,10 +492,12 @@ class Color_Enter(QWidget):
         self.R_fix_mode.setStyleSheet(QCOMBOXMODESETTING)
         self.R_fix_label = QLabel("R-CF-Fix")
         self.R_fix_box = QComboBox()
-        # 設定當前選中項目的文字顏色
-        self.R_fix_box.setStyleSheet(QCOMBOXSETTING)
         self.R_fix_table = QComboBox()
-        self.R_fix_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 防呆反灰設定
+        self.R_fix_box.setEnabled(False)
+        self.R_fix_table.setEnabled(False)
+        self.R_fix_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.R_fix_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發table連動改變
         self.update_RCF_Fix_datatable()
         self.updateRCF_Fix_ComboBox()
@@ -505,11 +533,12 @@ class Color_Enter(QWidget):
         self.G_fix_mode.setStyleSheet(QCOMBOXMODESETTING)
         self.G_fix_label = QLabel("G-CF-Fix")
         self.G_fix_box = QComboBox()
-        # 設定當前選中項目的文字顏色
-        self.G_fix_box.setStyleSheet(QCOMBOXSETTING)
-
         self.G_fix_table = QComboBox()
-        self.G_fix_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 防呆反灰設定
+        self.G_fix_box.setEnabled(False)
+        self.G_fix_table.setEnabled(False)
+        self.G_fix_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.G_fix_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發table連動改變
         self.update_GCF_Fix_datatable()
         self.updateGCF_Fix_ComboBox()
@@ -545,10 +574,12 @@ class Color_Enter(QWidget):
         self.B_fix_mode.setStyleSheet(QCOMBOXMODESETTING)
         self.B_fix_label = QLabel("B-CF-Fix")
         self.B_fix_box = QComboBox()
-        # 設定當前選中項目的文字顏色
-        self.B_fix_box.setStyleSheet(QCOMBOXSETTING)
         self.B_fix_table = QComboBox()
-        self.B_fix_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 防呆反灰設定
+        self.B_fix_box.setEnabled(False)
+        self.B_fix_table.setEnabled(False)
+        self.B_fix_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.B_fix_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發table連動改變
         self.update_BCF_Fix_datatable()
         self.updateBCF_Fix_ComboBox()
@@ -586,10 +617,13 @@ class Color_Enter(QWidget):
         self.R_aK_mode.setStyleSheet(QCOMBOXMODESETTING)
         # self.R_aK_label = QLabel("R-CF-α,K")
         self.R_aK_box = QComboBox()
-        # 設定當前選中項目的文字顏色
-        self.R_aK_box.setStyleSheet(QCOMBOXSETTING)
         self.R_aK_table = QComboBox()
-        self.R_aK_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 防呆反灰設定
+        self.R_aK_box.setEnabled(False)
+        self.R_aK_table.setEnabled(False)
+        self.R_aK_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.R_aK_table.setStyleSheet(QCOMBOBOXDISABLE)
+
         # 觸發table連動改變
         self.update_RCF_Change_datatable()
         self.updateRCF_Change_ComboBox()
@@ -627,9 +661,12 @@ class Color_Enter(QWidget):
         self.G_aK_mode.setStyleSheet(QCOMBOXMODESETTING)
         # self.G_aK_label = QLabel("G-F-α,K")
         self.G_aK_box = QComboBox()
-        self.G_aK_box.setStyleSheet(QCOMBOXSETTING)
         self.G_aK_table = QComboBox()
-        self.G_aK_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 防呆反灰設定
+        self.G_aK_box.setEnabled(False)
+        self.G_aK_table.setEnabled(False)
+        self.G_aK_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.G_aK_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發table連動改變
         self.update_GCF_Change_datatable()
         self.updateGCF_Change_ComboBox()
@@ -667,9 +704,12 @@ class Color_Enter(QWidget):
         self.B_aK_mode.setStyleSheet(QCOMBOXMODESETTING)
         # self.B_aK_label = QLabel("B-CF-α,K")
         self.B_aK_box = QComboBox()
-        self.B_aK_box.setStyleSheet(QCOMBOXSETTING)
         self.B_aK_table = QComboBox()
-        self.B_aK_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 防呆反灰設定
+        self.B_aK_box.setEnabled(False)
+        self.B_aK_table.setEnabled(False)
+        self.B_aK_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.B_aK_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發table連動改變
         self.update_BCF_Change_datatable()
         self.updateBCF_Change_ComboBox()
@@ -706,7 +746,6 @@ class Color_Enter(QWidget):
         R_differ_mode_items = ["未選", "自訂", "模擬"]
         for item in R_differ_mode_items:
             self.R_differ_mode.addItem(str(item))
-        # 設定當前選中項目的文字顏色
         self.R_differ_mode.setStyleSheet(QCOMBOXMODESETTING)
         #self.R_differ_label = QLabel("R-CF-differ")
         self.R_differ_box = QComboBox()
@@ -716,7 +755,13 @@ class Color_Enter(QWidget):
         self.R_differ_TK_edit.setFixedSize(100, 25)
         # R_differ_table
         self.R_differ_table = QComboBox()
-        self.R_differ_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 防呆反灰設定
+        self.R_differ_box.setEnabled(False)
+        self.R_differ_table.setEnabled(False)
+        self.R_differ_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.R_differ_table.setStyleSheet(QCOMBOBOXDISABLE)
+
+
         self.update_RCF_Differ_datatable()
         # 觸發R_differ_table
         self.updateRCF_Differ_ComboBox()# 初始化
@@ -752,14 +797,17 @@ class Color_Enter(QWidget):
         #self.G_differ_label = QLabel("G-CF-differ")
         self.G_differ_box = QComboBox()
         # 設定當前選中項目的文字顏色
-        self.G_differ_box.setStyleSheet(QCOMBOXSETTING)
         self.G_differ_TK_edit_label = QLabel("G-differ-TK")
         self.G_differ_TK_edit = QLineEdit()
         self.G_differ_TK_edit.setFixedSize(100, 25)
         # G_differ_table
         self.G_differ_table = QComboBox()
-        self.G_differ_table.setStyleSheet(QCOMBOBOXTABLESELECT)
         self.update_GCF_Differ_datatable()
+        # 防呆反灰設定
+        self.G_differ_box.setEnabled(False)
+        self.G_differ_table.setEnabled(False)
+        self.G_differ_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.G_differ_table.setStyleSheet(QCOMBOBOXDISABLE)
         # 觸發R_differ_table
         self.updateGCF_Differ_ComboBox()  # 初始化
         self.G_differ_table.currentIndexChanged.connect(self.updateGCF_Differ_ComboBox)
@@ -794,13 +842,16 @@ class Color_Enter(QWidget):
         #self.B_differ_label = QLabel("B-CF-differ")
         self.B_differ_box = QComboBox()
         # 設定當前選中項目的文字顏色
-        self.B_differ_box.setStyleSheet(QCOMBOXSETTING)
         self.B_differ_TK_edit_label = QLabel("B-differ-TK")
         self.B_differ_TK_edit = QLineEdit()
         self.B_differ_TK_edit.setFixedSize(100, 25)
         # B_differ_table
         self.B_differ_table = QComboBox()
-        self.B_differ_table.setStyleSheet(QCOMBOBOXTABLESELECT)
+        # 防呆反灰設定
+        self.B_differ_box.setEnabled(False)
+        self.B_differ_table.setEnabled(False)
+        self.B_differ_box.setStyleSheet(QCOMBOBOXDISABLE)
+        self.B_differ_table.setStyleSheet(QCOMBOBOXDISABLE)
         self.update_BCF_Differ_datatable()
         # 觸發R_differ_table
         self.updateBCF_Differ_ComboBox()  # 初始化
@@ -987,6 +1038,9 @@ class Color_Enter(QWidget):
 
         # Set Background
         self.setStyleSheet("background-color: lightyellow;")
+        # 連接全局信號到相應的方法
+        global_signal_manager.databaseUpdated.connect(self.updateLightSourceComboBox)
+        global_signal_manager.databaseUpdated.connect(self.update_light_source_datatable)
 
     def test(self):
         print("SSS")
@@ -1044,6 +1098,90 @@ class Color_Enter(QWidget):
                     item = self.color_table.item(row, col)
                     if item is not None:
                         item.setText("")
+            # 防呆反灰設定
+            self.light_source.setEnabled(False)
+            self.light_source_datatable.setEnabled(False)
+            self.light_source.setStyleSheet(QCOMBOBOXDISABLE)
+            self.light_source_datatable.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.light_source_led.setEnabled(False)
+            self.light_source_led_datatable.setEnabled(False)
+            self.light_source_led.setStyleSheet(QCOMBOBOXDISABLE)
+            self.light_source_led_datatable.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.source_led.setEnabled(False)
+            self.source_led_datatable.setEnabled(False)
+            self.source_led.setStyleSheet(QCOMBOBOXDISABLE)
+            self.source_led_datatable.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer1_box.setEnabled(False)
+            self.layer1_table.setEnabled(False)
+            self.layer1_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer1_table.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer2_box.setEnabled(False)
+            self.layer2_table.setEnabled(False)
+            self.layer2_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer2_table.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer3_box.setEnabled(False)
+            self.layer3_table.setEnabled(False)
+            self.layer3_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer3_table.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer4_box.setEnabled(False)
+            self.layer4_table.setEnabled(False)
+            self.layer4_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer4_table.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer5_box.setEnabled(False)
+            self.layer5_table.setEnabled(False)
+            self.layer5_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer5_table.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer6_box.setEnabled(False)
+            self.layer6_table.setEnabled(False)
+            self.layer6_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer6_table.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.R_fix_box.setEnabled(False)
+            self.R_fix_table.setEnabled(False)
+            self.R_fix_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.R_fix_table.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.G_fix_box.setEnabled(False)
+            self.G_fix_table.setEnabled(False)
+            self.G_fix_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.G_fix_table.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.B_fix_box.setEnabled(False)
+            self.B_fix_table.setEnabled(False)
+            self.B_fix_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.B_fix_table.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.R_aK_box.setEnabled(False)
+            self.R_aK_table.setEnabled(False)
+            self.R_aK_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.R_aK_table.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.G_aK_box.setEnabled(False)
+            self.G_aK_table.setEnabled(False)
+            self.G_aK_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.G_aK_table.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.B_aK_box.setEnabled(False)
+            self.B_aK_table.setEnabled(False)
+            self.B_aK_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.B_aK_table.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.G_differ_box.setEnabled(False)
+            self.G_differ_table.setEnabled(False)
+            self.G_differ_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.G_differ_table.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.R_differ_box.setEnabled(False)
+            self.R_differ_table.setEnabled(False)
+            self.R_differ_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.R_differ_table.setStyleSheet(QCOMBOBOXDISABLE)
+            # 防呆反灰設定
+            self.B_differ_box.setEnabled(False)
+            self.B_differ_table.setEnabled(False)
+            self.B_differ_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.B_differ_table.setStyleSheet(QCOMBOBOXDISABLE)
         if self.light_source_mode.currentText() == "自訂":
             # 防呆區
             self.light_source.setEnabled(True)
@@ -1100,10 +1238,14 @@ class Color_Enter(QWidget):
             return BLU_spectrum_Series
             # 選項關鍵----------------------------------------------------------
         elif self.light_source_mode.currentText() == "替換":
+            self.light_source.setEnabled(True)
+            self.light_source_datatable.setEnabled(True)
             self.light_source_led.setEnabled(True)
             self.light_source_led_datatable.setEnabled(True)
             self.source_led.setEnabled(True)
             self.source_led_datatable.setEnabled(True)
+            self.light_source.setStyleSheet(QCOMBOXSETTING)
+            self.light_source_datatable.setStyleSheet(QCOMBOBOXTABLESELECT)
             self.source_led.setStyleSheet(QCOMBOXSETTING)
             self.source_led_datatable.setStyleSheet(QCOMBOBOXTABLESELECT)
             self.light_source_led.setStyleSheet(QCOMBOXSETTING)
@@ -1193,6 +1335,10 @@ class Color_Enter(QWidget):
     # Cell
     def calculate_layer1(self):
         if self.layer1_mode.currentText() == "自訂":
+            self.layer1_box.setEnabled(True)
+            self.layer1_table.setEnabled(True)
+            self.layer1_box.setStyleSheet(QCOMBOXSETTING)
+            self.layer1_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_layer1_自訂")
             connection_layer1 = sqlite3.connect("cell_spectrum.db")
             cursor_layer1 = connection_layer1.cursor()
@@ -1226,6 +1372,10 @@ class Color_Enter(QWidget):
             # 自訂BLU_Spectrum回傳
             return layer1_spectrum_Series
         else:
+            self.layer1_box.setEnabled(False)
+            self.layer1_table.setEnabled(False)
+            self.layer1_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer1_table.setStyleSheet(QCOMBOBOXDISABLE)
             layer1_spectrum_Series = 1
             print("layer1:未選")
             return layer1_spectrum_Series
@@ -1233,6 +1383,10 @@ class Color_Enter(QWidget):
     # BSITO
     def calculate_layer2(self):
         if self.layer2_mode.currentText() == "自訂":
+            self.layer2_box.setEnabled(True)
+            self.layer2_table.setEnabled(True)
+            self.layer2_box.setStyleSheet(QCOMBOXSETTING)
+            self.layer2_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_layer2_自訂")
             connection_layer2 = sqlite3.connect("BSITO_spectrum.db")
             cursor_layer2 = connection_layer2.cursor()
@@ -1266,12 +1420,20 @@ class Color_Enter(QWidget):
             # 自訂BLU_Spectrum回傳
             return layer2_spectrum_Series
         else:
+            self.layer2_box.setEnabled(False)
+            self.layer2_table.setEnabled(False)
+            self.layer2_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer2_table.setStyleSheet(QCOMBOBOXDISABLE)
             layer2_spectrum_Series = 1
             print("layer2:未選")
             return layer2_spectrum_Series
 
     def calculate_layer3(self):
         if self.layer3_mode.currentText() == "自訂":
+            self.layer3_box.setEnabled(True)
+            self.layer3_table.setEnabled(True)
+            self.layer3_box.setStyleSheet(QCOMBOXSETTING)
+            self.layer3_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_layer3_自訂")
             connection_layer3 = sqlite3.connect("Layer3_spectrum.db")
             cursor_layer3 = connection_layer3.cursor()
@@ -1305,12 +1467,20 @@ class Color_Enter(QWidget):
             # 自訂BLU_Spectrum回傳
             return layer3_spectrum_Series
         else:
+            self.layer3_box.setEnabled(False)
+            self.layer3_table.setEnabled(False)
+            self.layer3_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer3_table.setStyleSheet(QCOMBOBOXDISABLE)
             layer3_spectrum_Series = 1
             print("layer3:未選")
             return layer3_spectrum_Series
 
     def calculate_layer4(self):
         if self.layer4_mode.currentText() == "自訂":
+            self.layer4_box.setEnabled(True)
+            self.layer4_table.setEnabled(True)
+            self.layer4_box.setStyleSheet(QCOMBOXSETTING)
+            self.layer4_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_layer4_自訂")
             connection_layer4 = sqlite3.connect("Layer4_spectrum.db")
             cursor_layer4 = connection_layer4.cursor()
@@ -1344,12 +1514,20 @@ class Color_Enter(QWidget):
             # 自訂BLU_Spectrum回傳
             return layer4_spectrum_Series
         else:
+            self.layer4_box.setEnabled(False)
+            self.layer4_table.setEnabled(False)
+            self.layer4_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer4_table.setStyleSheet(QCOMBOBOXDISABLE)
             layer4_spectrum_Series = 1
             print("layer4:未選")
             return layer4_spectrum_Series
 
     def calculate_layer5(self):
         if self.layer5_mode.currentText() == "自訂":
+            self.layer5_box.setEnabled(True)
+            self.layer5_table.setEnabled(True)
+            self.layer5_box.setStyleSheet(QCOMBOXSETTING)
+            self.layer5_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_layer5_自訂")
             connection_layer5 = sqlite3.connect("Layer5_spectrum.db")
             cursor_layer5 = connection_layer5.cursor()
@@ -1383,12 +1561,20 @@ class Color_Enter(QWidget):
             # 自訂BLU_Spectrum回傳
             return layer5_spectrum_Series
         else:
+            self.layer5_box.setEnabled(False)
+            self.layer5_table.setEnabled(False)
+            self.layer5_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer5_table.setStyleSheet(QCOMBOBOXDISABLE)
             layer5_spectrum_Series = 1
             print("layer5:未選")
             return layer5_spectrum_Series
 
     def calculate_layer6(self):
         if self.layer6_mode.currentText() == "自訂":
+            self.layer6_box.setEnabled(True)
+            self.layer6_table.setEnabled(True)
+            self.layer6_box.setStyleSheet(QCOMBOXSETTING)
+            self.layer6_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_layer6_自訂")
             connection_layer6 = sqlite3.connect("Layer6_spectrum.db")
             cursor_layer6 = connection_layer6.cursor()
@@ -1422,6 +1608,10 @@ class Color_Enter(QWidget):
             # 自訂BLU_Spectrum回傳
             return layer6_spectrum_Series
         else:
+            self.layer6_box.setEnabled(False)
+            self.layer6_table.setEnabled(False)
+            self.layer6_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.layer6_table.setStyleSheet(QCOMBOBOXDISABLE)
             layer6_spectrum_Series = 1
             print("layer6:未選")
             return layer6_spectrum_Series
@@ -1429,6 +1619,11 @@ class Color_Enter(QWidget):
     # RCF_Fix
     def calculate_RCF_Fix(self):
         if self.R_fix_mode.currentText() == "自訂":
+            # 防呆反灰設定
+            self.R_fix_box.setEnabled(True)
+            self.R_fix_table.setEnabled(True)
+            self.R_fix_box.setStyleSheet(QCOMBOXSETTING)
+            self.R_fix_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_RCF_Fix_自訂")
             connection_RCF_Fix = sqlite3.connect("RCF_Fix_spectrum.db")
             cursor_RCF_Fix = connection_RCF_Fix.cursor()
@@ -1472,6 +1667,11 @@ class Color_Enter(QWidget):
             # 自訂RCF_Fix_Spectrum回傳
             return new_RCF_Fix_spectrum_Series
         else:
+            # 防呆反灰設定
+            self.R_fix_box.setEnabled(False)
+            self.R_fix_table.setEnabled(False)
+            self.R_fix_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.R_fix_table.setStyleSheet(QCOMBOBOXDISABLE)
             new_RCF_Fix_spectrum_Series = 1
             print("RCF_Fix:未選")
             return new_RCF_Fix_spectrum_Series
@@ -1479,6 +1679,11 @@ class Color_Enter(QWidget):
     # GCF_Fix
     def calculate_GCF_Fix(self):
         if self.G_fix_mode.currentText() == "自訂":
+            # 防呆反灰設定
+            self.G_fix_box.setEnabled(True)
+            self.G_fix_table.setEnabled(True)
+            self.G_fix_box.setStyleSheet(QCOMBOXSETTING)
+            self.G_fix_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_GCF_Fix_自訂")
             connection_GCF_Fix = sqlite3.connect("GCF_Fix_spectrum.db")
             cursor_GCF_Fix = connection_GCF_Fix.cursor()
@@ -1522,6 +1727,11 @@ class Color_Enter(QWidget):
             # 自訂GCF_Fix_Spectrum回傳
             return new_GCF_Fix_spectrum_Series
         else:
+            # 防呆反灰設定
+            self.G_fix_box.setEnabled(False)
+            self.G_fix_table.setEnabled(False)
+            self.G_fix_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.G_fix_table.setStyleSheet(QCOMBOBOXDISABLE)
             new_GCF_Fix_spectrum_Series = 1
             print("GCF_Fix:未選")
             return new_GCF_Fix_spectrum_Series
@@ -1529,6 +1739,11 @@ class Color_Enter(QWidget):
     # BCF_Fix
     def calculate_BCF_Fix(self):
         if self.B_fix_mode.currentText() == "自訂":
+            # 防呆反灰設定
+            self.B_fix_box.setEnabled(True)
+            self.B_fix_table.setEnabled(True)
+            self.B_fix_box.setStyleSheet(QCOMBOXSETTING)
+            self.B_fix_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_BCF_Fix_自訂")
             connection_BCF_Fix = sqlite3.connect("BCF_Fix_spectrum.db")
             cursor_BCF_Fix = connection_BCF_Fix.cursor()
@@ -1572,6 +1787,11 @@ class Color_Enter(QWidget):
             # 自訂BCF_Fix_Spectrum回傳
             return new_BCF_Fix_spectrum_Series
         else:
+            # 防呆反灰設定
+            self.B_fix_box.setEnabled(False)
+            self.B_fix_table.setEnabled(False)
+            self.B_fix_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.B_fix_table.setStyleSheet(QCOMBOBOXDISABLE)
             new_BCF_Fix_spectrum_Series = 1
             print("BCF_Fix:未選")
             return new_BCF_Fix_spectrum_Series
@@ -1579,6 +1799,11 @@ class Color_Enter(QWidget):
     # RCF_Change
     def calculate_RCF_Change(self):
         if self.R_aK_mode.currentText() == "自訂":
+            # 防呆反灰設定
+            self.R_aK_box.setEnabled(True)
+            self.R_aK_table.setEnabled(True)
+            self.R_aK_box.setStyleSheet(QCOMBOXSETTING)
+            self.R_aK_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_RCF_Change自訂")
             connection_RCF_Change = sqlite3.connect("RCF_Change_spectrum.db")
             cursor_RCF_Change = connection_RCF_Change.cursor()
@@ -1654,8 +1879,12 @@ class Color_Enter(QWidget):
                 K_RCF_Change_spectrum_Series = K_RCF_Change_spectrum_Series.fillna(0)
                 K_RCF_Change_spectrum_Series = K_RCF_Change_spectrum_Series.dropna()
                 print(" K_RCF_Change_spectrum_Series", K_RCF_Change_spectrum_Series)
-                R_aK_TK = float(self.R_aK_TK_edit.text())
-                if R_aK_TK != 0:
+                # R_aK_TK = float(self.R_aK_TK_edit.text())
+                if self.R_aK_TK_edit.text() == "":
+                    AK_RCF_Change_spectrum_Series = 1
+                    return AK_RCF_Change_spectrum_Series
+                elif self.R_aK_TK_edit.text() != "":
+                    R_aK_TK = float(self.R_aK_TK_edit.text())
                     # 檢查數據類型
                     # print("K_RCF_Change_spectrum_Series dtype:", K_RCF_Change_spectrum_Series.dtype)
                     # print("A_RCF_Change_spectrum_Series dtype:", A_RCF_Change_spectrum_Series.dtype)
@@ -1678,6 +1907,11 @@ class Color_Enter(QWidget):
             # 關閉連線
             connection_RCF_Change.close()
         else:
+            # 防呆反灰設定
+            self.R_aK_box.setEnabled(False)
+            self.R_aK_table.setEnabled(False)
+            self.R_aK_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.R_aK_table.setStyleSheet(QCOMBOBOXDISABLE)
             AK_RCF_Change_spectrum_Series = 1
             print("RCF_Change:未選,默認1")
             return AK_RCF_Change_spectrum_Series
@@ -1685,6 +1919,11 @@ class Color_Enter(QWidget):
     # GCF_Change
     def calculate_GCF_Change(self):
         if self.G_aK_mode.currentText() == "自訂":
+            # 防呆反灰設定
+            self.G_aK_box.setEnabled(True)
+            self.G_aK_table.setEnabled(True)
+            self.G_aK_box.setStyleSheet(QCOMBOXSETTING)
+            self.G_aK_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_GCF_Change自訂")
             connection_GCF_Change = sqlite3.connect("GCF_Change_spectrum.db")
             cursor_GCF_Change = connection_GCF_Change.cursor()
@@ -1760,8 +1999,12 @@ class Color_Enter(QWidget):
                 K_GCF_Change_spectrum_Series = K_GCF_Change_spectrum_Series.fillna(0)
                 K_GCF_Change_spectrum_Series = K_GCF_Change_spectrum_Series.dropna()
                 # print(" K_GCF_Change_spectrum_Series",  K_GCF_Change_spectrum_Series)
-                G_aK_TK = float(self.G_aK_TK_edit.text())
-                if G_aK_TK != 0:
+                # G_aK_TK = float(self.G_aK_TK_edit.text())
+                if self.G_aK_TK_edit.text() == "":
+                    AK_GCF_Change_spectrum_Series = 1
+                    return AK_GCF_Change_spectrum_Series
+                elif self.G_aK_TK_edit.text() != "":
+                    G_aK_TK = float(self.G_aK_TK_edit.text())
                     # 檢查數據類型
                     # print("K_RCF_Change_spectrum_Series dtype:", K_RCF_Change_spectrum_Series.dtype)
                     # print("A_RCF_Change_spectrum_Series dtype:", A_RCF_Change_spectrum_Series.dtype)
@@ -1780,6 +2023,11 @@ class Color_Enter(QWidget):
             # 關閉連線
             connection_GCF_Change.close()
         else:
+            # 防呆反灰設定
+            self.G_aK_box.setEnabled(False)
+            self.G_aK_table.setEnabled(False)
+            self.G_aK_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.G_aK_table.setStyleSheet(QCOMBOBOXDISABLE)
             AK_GCF_Change_spectrum_Series = 1
             print("GCF_Change:未選,默認1")
             return AK_GCF_Change_spectrum_Series
@@ -1787,6 +2035,11 @@ class Color_Enter(QWidget):
     # BCF_Change
     def calculate_BCF_Change(self):
         if self.B_aK_mode.currentText() == "自訂":
+            # 防呆反灰設定
+            self.B_aK_box.setEnabled(True)
+            self.B_aK_table.setEnabled(True)
+            self.B_aK_box.setStyleSheet(QCOMBOXSETTING)
+            self.B_aK_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_BCF_Change自訂")
             connection_BCF_Change = sqlite3.connect("BCF_Change_spectrum.db")
             cursor_BCF_Change = connection_BCF_Change.cursor()
@@ -1862,8 +2115,12 @@ class Color_Enter(QWidget):
                 K_BCF_Change_spectrum_Series = K_BCF_Change_spectrum_Series.fillna(0)
                 K_BCF_Change_spectrum_Series = K_BCF_Change_spectrum_Series.dropna()
                 # print(" K_GCF_Change_spectrum_Series",  K_GCF_Change_spectrum_Series)
-                B_aK_TK = float(self.B_aK_TK_edit.text())
-                if B_aK_TK != 0:
+                # B_aK_TK = float(self.B_aK_TK_edit.text())
+                if self.B_aK_TK_edit.text() == "":
+                    AK_BCF_Change_spectrum_Series = 1
+                    return AK_BCF_Change_spectrum_Series
+                elif self.B_aK_TK_edit.text()!= "":
+                    B_aK_TK = float(self.B_aK_TK_edit.text())
                     # 檢查數據類型
                     # print("K_RCF_Change_spectrum_Series dtype:", K_RCF_Change_spectrum_Series.dtype)
                     # print("A_RCF_Change_spectrum_Series dtype:", A_RCF_Change_spectrum_Series.dtype)
@@ -1882,12 +2139,22 @@ class Color_Enter(QWidget):
             # 關閉連線
             connection_BCF_Change.close()
         else:
+            # 防呆反灰設定
+            self.B_aK_box.setEnabled(False)
+            self.B_aK_table.setEnabled(False)
+            self.B_aK_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.B_aK_table.setStyleSheet(QCOMBOBOXDISABLE)
             AK_BCF_Change_spectrum_Series = 1
             print("BCF_Change:未選,默認1")
             return AK_BCF_Change_spectrum_Series
 
     def calculate_RCF_Differ(self):
         if self.R_differ_mode.currentText() == "自訂":
+            # 防呆反灰設定
+            self.R_differ_box.setEnabled(True)
+            self.R_differ_table.setEnabled(True)
+            self.R_differ_box.setStyleSheet(QCOMBOXSETTING)
+            self.R_differ_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_RCF_Differ自訂")
             connection_RCF_Differ = sqlite3.connect("RCF_Differ_spectrum.db")
             cursor_RCF_Differ = connection_RCF_Differ.cursor()
@@ -1918,124 +2185,143 @@ class Color_Enter(QWidget):
             TK_record = []
             series_list_length = len(series_list)
             for i in range(series_list_length):
-                TK_record.append(float(series_list[i].iloc[0]))
+                try:
+                    TK_record.append(float(series_list[i].iloc[0]))
+                except ValueError:
+                    C_Series = 1
+                    # 發生錯誤時，忽略並繼續執行
+                    return C_Series
             self.R_differ_TK_edit_label.setText(f"TKrange: {min(TK_record):.2f}~{max(TK_record):.2f}")
-            R_differ_TK = float(self.R_differ_TK_edit.text())
-            Thickness_list = [R_differ_TK]
-            for i in range(series_list_length):
-                Thickness_list.append(float(series_list[i].iloc[0]))
-                TK_record.append(float(series_list[i].iloc[0]))
-                #print(series_list[i].iloc[0])
-            #print("Thickness_list",Thickness_list)
-            #print(max(Thickness_list))
-            # print(sorted(Thickness_list))
-            Thickness_list_2 = sorted(Thickness_list)
-            #print("Thickness_list_2", Thickness_list_2)
-            index_R_differ_TK = Thickness_list_2.index(R_differ_TK)
-            #print(Thickness_list_2.index(R_differ_TK))
-
-            # 輸入厚度的三種情況
-            if R_differ_TK == min(Thickness_list):
-                print("min")
-                A_index_value = Thickness_list_2[index_R_differ_TK + 1]
-                #print("A_index_value", A_index_value)
-                B_index_value = Thickness_list_2[index_R_differ_TK + 2]
-                #print("B_index_value", B_index_value)
-                Thickness_list.remove(Thickness_list[0])
-                A_index = Thickness_list.index(A_index_value)
-                #print("A_index", A_index)
-                B_index = Thickness_list.index(B_index_value)
-                #print("B_index", B_index)
-                # A Series
-                A_Series = series_list[A_index][1:]
-                A_Series = pd.to_numeric(A_Series, errors='coerce')
-                A_Series = A_Series.fillna(0)
-                A_Series = A_Series.dropna()
-                # B Series
-                B_Series = series_list[B_index][1:]
-                B_Series = pd.to_numeric(B_Series, errors='coerce')
-                B_Series = B_Series.fillna(0)
-                B_Series = B_Series.dropna()
-
-                # Final R Series
-                C_Series = A_Series + (R_differ_TK - A_index_value) * (B_Series - A_Series) / (
-                            B_index_value - A_index_value)
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            elif R_differ_TK == max(Thickness_list):
-                print("max")
-                A_index_value = Thickness_list_2[index_R_differ_TK - 2]
-                B_index_value = Thickness_list_2[index_R_differ_TK - 1]
-                Thickness_list.remove(Thickness_list[0])
-                A_index = Thickness_list.index(A_index_value)
-                B_index = Thickness_list.index(B_index_value)
-                # A Series
-                A_Series = series_list[A_index][1:]
-                A_Series = pd.to_numeric(A_Series, errors='coerce')
-                A_Series = A_Series.fillna(0)
-                A_Series = A_Series.dropna()
-                # B Series
-                B_Series = series_list[B_index][1:]
-                B_Series = pd.to_numeric(B_Series, errors='coerce')
-                B_Series = B_Series.fillna(0)
-                B_Series = B_Series.dropna()
-                # Final R Series
-                C_Series = A_Series + (R_differ_TK - A_index_value) * (B_Series - A_Series) / (
-                            B_index_value - A_index_value)
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            elif R_differ_TK in (Thickness_list[1:]):
-                print("equal")
-                # 取得對應的索引
-                Thickness_list.remove(Thickness_list[0])
-                equal_index = Thickness_list.index(R_differ_TK)
-                #print("Equal Index:", equal_index)
-                #print("Equal Value:", R_differ_TK)
-                C_Series = series_list[equal_index][1:]
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            else:
-                print("mid")
-                #print("R_differ_TK",R_differ_TK)
-                #print("Thickness_list[1:]",Thickness_list[1:])
-                A_index_value = Thickness_list_2[index_R_differ_TK - 1]
-                #print("A_index_value",A_index_value)
-                B_index_value = Thickness_list_2[index_R_differ_TK + 1]
-                #print("B_index_value", B_index_value)
-                Thickness_list.remove(Thickness_list[0])
-                A_index = Thickness_list.index(A_index_value)
-                #print("A_index",A_index)
+            if self.R_differ_TK_edit.text() == "":
+                C_Series = 1
+                return C_Series
+            elif self.R_differ_TK_edit.text() != "":
+                R_differ_TK = float(self.R_differ_TK_edit.text())
+                Thickness_list = [R_differ_TK]
+                for i in range(series_list_length):
+                    Thickness_list.append(float(series_list[i].iloc[0]))
+                    TK_record.append(float(series_list[i].iloc[0]))
+                    #print(series_list[i].iloc[0])
                 #print("Thickness_list",Thickness_list)
-                B_index = Thickness_list.index(B_index_value)
-                #print("B_index", B_index)
-                # A Series
-                A_Series = series_list[A_index][1:]
-                A_Series = pd.to_numeric(A_Series, errors='coerce')
-                A_Series = A_Series.fillna(0)
-                A_Series = A_Series.dropna()
-                #print("A_Series",A_Series)
-                # B Series
-                B_Series = series_list[B_index][1:]
-                B_Series = pd.to_numeric(B_Series, errors='coerce')
-                B_Series = B_Series.fillna(0)
-                B_Series = B_Series.dropna()
-                #print("B_Series", B_Series)
+                #print(max(Thickness_list))
+                # print(sorted(Thickness_list))
+                Thickness_list_2 = sorted(Thickness_list)
+                #print("Thickness_list_2", Thickness_list_2)
+                index_R_differ_TK = Thickness_list_2.index(R_differ_TK)
+                #print(Thickness_list_2.index(R_differ_TK))
 
-                # Final R Series
-                C_Series = A_Series + (R_differ_TK - A_index_value) * (B_Series - A_Series) / (B_index_value - A_index_value)
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            # 關閉連線
-            connection_RCF_Differ.close()
-            print("C_Series",C_Series)
-            return C_Series
+                # 輸入厚度的三種情況
+                if R_differ_TK == min(Thickness_list):
+                    print("min")
+                    A_index_value = Thickness_list_2[index_R_differ_TK + 1]
+                    #print("A_index_value", A_index_value)
+                    B_index_value = Thickness_list_2[index_R_differ_TK + 2]
+                    #print("B_index_value", B_index_value)
+                    Thickness_list.remove(Thickness_list[0])
+                    A_index = Thickness_list.index(A_index_value)
+                    #print("A_index", A_index)
+                    B_index = Thickness_list.index(B_index_value)
+                    #print("B_index", B_index)
+                    # A Series
+                    A_Series = series_list[A_index][1:]
+                    A_Series = pd.to_numeric(A_Series, errors='coerce')
+                    A_Series = A_Series.fillna(0)
+                    A_Series = A_Series.dropna()
+                    # B Series
+                    B_Series = series_list[B_index][1:]
+                    B_Series = pd.to_numeric(B_Series, errors='coerce')
+                    B_Series = B_Series.fillna(0)
+                    B_Series = B_Series.dropna()
+
+                    # Final R Series
+                    C_Series = A_Series + (R_differ_TK - A_index_value) * (B_Series - A_Series) / (
+                                B_index_value - A_index_value)
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                elif R_differ_TK == max(Thickness_list):
+                    print("max")
+                    A_index_value = Thickness_list_2[index_R_differ_TK - 2]
+                    B_index_value = Thickness_list_2[index_R_differ_TK - 1]
+                    Thickness_list.remove(Thickness_list[0])
+                    A_index = Thickness_list.index(A_index_value)
+                    B_index = Thickness_list.index(B_index_value)
+                    # A Series
+                    A_Series = series_list[A_index][1:]
+                    A_Series = pd.to_numeric(A_Series, errors='coerce')
+                    A_Series = A_Series.fillna(0)
+                    A_Series = A_Series.dropna()
+                    # B Series
+                    B_Series = series_list[B_index][1:]
+                    B_Series = pd.to_numeric(B_Series, errors='coerce')
+                    B_Series = B_Series.fillna(0)
+                    B_Series = B_Series.dropna()
+                    # Final R Series
+                    C_Series = A_Series + (R_differ_TK - A_index_value) * (B_Series - A_Series) / (
+                                B_index_value - A_index_value)
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                elif R_differ_TK in (Thickness_list[1:]):
+                    print("equal")
+                    # 取得對應的索引
+                    Thickness_list.remove(Thickness_list[0])
+                    equal_index = Thickness_list.index(R_differ_TK)
+                    #print("Equal Index:", equal_index)
+                    #print("Equal Value:", R_differ_TK)
+                    C_Series = series_list[equal_index][1:]
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                else:
+                    print("mid")
+                    #print("R_differ_TK",R_differ_TK)
+                    #print("Thickness_list[1:]",Thickness_list[1:])
+                    A_index_value = Thickness_list_2[index_R_differ_TK - 1]
+                    #print("A_index_value",A_index_value)
+                    B_index_value = Thickness_list_2[index_R_differ_TK + 1]
+                    #print("B_index_value", B_index_value)
+                    Thickness_list.remove(Thickness_list[0])
+                    A_index = Thickness_list.index(A_index_value)
+                    #print("A_index",A_index)
+                    #print("Thickness_list",Thickness_list)
+                    B_index = Thickness_list.index(B_index_value)
+                    #print("B_index", B_index)
+                    # A Series
+                    A_Series = series_list[A_index][1:]
+                    A_Series = pd.to_numeric(A_Series, errors='coerce')
+                    A_Series = A_Series.fillna(0)
+                    A_Series = A_Series.dropna()
+                    #print("A_Series",A_Series)
+                    # B Series
+                    B_Series = series_list[B_index][1:]
+                    B_Series = pd.to_numeric(B_Series, errors='coerce')
+                    B_Series = B_Series.fillna(0)
+                    B_Series = B_Series.dropna()
+                    #print("B_Series", B_Series)
+
+                    # Final R Series
+                    C_Series = A_Series + (R_differ_TK - A_index_value) * (B_Series - A_Series) / (B_index_value - A_index_value)
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                # 關閉連線
+                connection_RCF_Differ.close()
+                print("C_Series",C_Series)
+                return C_Series
         else:
+            # 防呆反灰設定
+            self.R_differ_box.setEnabled(False)
+            self.R_differ_table.setEnabled(False)
+            self.R_differ_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.R_differ_table.setStyleSheet(QCOMBOBOXDISABLE)
             C_Series = 1
             print("RCF_Differ:未選,默認1")
             return C_Series
 
     def calculate_GCF_Differ(self):
         if self.G_differ_mode.currentText() == "自訂":
+            # 防呆反灰設定
+            self.G_differ_box.setEnabled(True)
+            self.G_differ_table.setEnabled(True)
+            self.G_differ_box.setStyleSheet(QCOMBOXSETTING)
+            self.G_differ_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_GCF_Differ自訂")
             connection_GCF_Differ = sqlite3.connect("GCF_Differ_spectrum.db")
             cursor_GCF_Differ = connection_GCF_Differ.cursor()
@@ -2064,125 +2350,144 @@ class Color_Enter(QWidget):
             TK_record = []
             series_list_length = len(series_list)
             for i in range(series_list_length):
-                TK_record.append(float(series_list[i].iloc[0]))
+                try:
+                    TK_record.append(float(series_list[i].iloc[0]))
+                except ValueError:
+                    C_Series = 1
+                    # 發生錯誤時，忽略並繼續執行
+                    return C_Series
             self.G_differ_TK_edit_label.setText(f"TKrange: {min(TK_record):.2f}~{max(TK_record):.2f}")
 
             #print("series_list", series_list)
-            G_differ_TK = float(self.G_differ_TK_edit.text())
-            Thickness_list = [G_differ_TK]
-            for i in range(series_list_length):
-                Thickness_list.append(float(series_list[i].iloc[0]))
-                print(series_list[i].iloc[0])
-            #print("Thickness_list",Thickness_list)
-            #print(max(Thickness_list))
-            # print(sorted(Thickness_list))
-            Thickness_list_2 = sorted(Thickness_list)
-            #print("Thickness_list_2", Thickness_list_2)
-            index_G_differ_TK = Thickness_list_2.index(G_differ_TK)
-            #print(Thickness_list_2.index(G_differ_TK))
-
-            # 輸入厚度的三種情況
-            if G_differ_TK == min(Thickness_list):
-                print("min")
-                A_index_value = Thickness_list_2[index_G_differ_TK + 1]
-                #print("A_index_value", A_index_value)
-                B_index_value = Thickness_list_2[index_G_differ_TK + 2]
-                #print("B_index_value", B_index_value)
-                Thickness_list.remove(Thickness_list[0])
-                A_index = Thickness_list.index(A_index_value)
-                #print("A_index", A_index)
-                B_index = Thickness_list.index(B_index_value)
-                #print("B_index", B_index)
-                # A Series
-                A_Series = series_list[A_index][1:]
-                A_Series = pd.to_numeric(A_Series, errors='coerce')
-                A_Series = A_Series.fillna(0)
-                A_Series = A_Series.dropna()
-                # B Series
-                B_Series = series_list[B_index][1:]
-                B_Series = pd.to_numeric(B_Series, errors='coerce')
-                B_Series = B_Series.fillna(0)
-                B_Series = B_Series.dropna()
-
-                # Final G Series
-                C_Series = A_Series + (G_differ_TK - A_index_value) * (B_Series - A_Series) / (
-                            B_index_value - A_index_value)
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            elif G_differ_TK == max(Thickness_list):
-                print("max")
-                A_index_value = Thickness_list_2[index_G_differ_TK - 2]
-                B_index_value = Thickness_list_2[index_G_differ_TK - 1]
-                Thickness_list.remove(Thickness_list[0])
-                A_index = Thickness_list.index(A_index_value)
-                B_index = Thickness_list.index(B_index_value)
-                # A Series
-                A_Series = series_list[A_index][1:]
-                A_Series = pd.to_numeric(A_Series, errors='coerce')
-                A_Series = A_Series.fillna(0)
-                A_Series = A_Series.dropna()
-                # B Series
-                B_Series = series_list[B_index][1:]
-                B_Series = pd.to_numeric(B_Series, errors='coerce')
-                B_Series = B_Series.fillna(0)
-                B_Series = B_Series.dropna()
-                # Final R Series
-                C_Series = A_Series + (G_differ_TK - A_index_value) * (B_Series - A_Series) / (
-                            B_index_value - A_index_value)
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            elif G_differ_TK in (Thickness_list[1:]):
-                print("equal")
-                # 取得對應的索引
-                Thickness_list.remove(Thickness_list[0])
-                equal_index = Thickness_list.index(G_differ_TK)
-                #print("Equal Index:", equal_index)
-                #print("Equal Value:", R_differ_TK)
-                C_Series = series_list[equal_index][1:]
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            else:
-                print("mid")
-                #print("R_differ_TK",R_differ_TK)
-                #print("Thickness_list[1:]",Thickness_list[1:])
-                A_index_value = Thickness_list_2[index_G_differ_TK - 1]
-                #print("A_index_value",A_index_value)
-                B_index_value = Thickness_list_2[index_G_differ_TK + 1]
-                #print("B_index_value", B_index_value)
-                Thickness_list.remove(Thickness_list[0])
-                A_index = Thickness_list.index(A_index_value)
-                #print("A_index",A_index)
+            if self.G_differ_TK_edit.text() == "":
+                C_Series = 1
+                return C_Series
+            elif self.G_differ_TK_edit.text() != "":
+                G_differ_TK = float(self.G_differ_TK_edit.text())
+                Thickness_list = [G_differ_TK]
+                for i in range(series_list_length):
+                    Thickness_list.append(float(series_list[i].iloc[0]))
+                    print(series_list[i].iloc[0])
                 #print("Thickness_list",Thickness_list)
-                B_index = Thickness_list.index(B_index_value)
-                #print("B_index", B_index)
-                # A Series
-                A_Series = series_list[A_index][1:]
-                A_Series = pd.to_numeric(A_Series, errors='coerce')
-                A_Series = A_Series.fillna(0)
-                A_Series = A_Series.dropna()
-                #print("A_Series",A_Series)
-                # B Series
-                B_Series = series_list[B_index][1:]
-                B_Series = pd.to_numeric(B_Series, errors='coerce')
-                B_Series = B_Series.fillna(0)
-                B_Series = B_Series.dropna()
-                #print("B_Series", B_Series)
+                #print(max(Thickness_list))
+                # print(sorted(Thickness_list))
+                Thickness_list_2 = sorted(Thickness_list)
+                #print("Thickness_list_2", Thickness_list_2)
+                index_G_differ_TK = Thickness_list_2.index(G_differ_TK)
+                #print(Thickness_list_2.index(G_differ_TK))
 
-                # Final R Series
-                C_Series = A_Series + (G_differ_TK - A_index_value) * (B_Series - A_Series) / (B_index_value - A_index_value)
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            # 關閉連線
-            connection_GCF_Differ.close()
-            print("C_Series",C_Series)
-            return C_Series
+                # 輸入厚度的三種情況
+                if G_differ_TK == min(Thickness_list):
+                    print("min")
+                    A_index_value = Thickness_list_2[index_G_differ_TK + 1]
+                    #print("A_index_value", A_index_value)
+                    B_index_value = Thickness_list_2[index_G_differ_TK + 2]
+                    #print("B_index_value", B_index_value)
+                    Thickness_list.remove(Thickness_list[0])
+                    A_index = Thickness_list.index(A_index_value)
+                    #print("A_index", A_index)
+                    B_index = Thickness_list.index(B_index_value)
+                    #print("B_index", B_index)
+                    # A Series
+                    A_Series = series_list[A_index][1:]
+                    A_Series = pd.to_numeric(A_Series, errors='coerce')
+                    A_Series = A_Series.fillna(0)
+                    A_Series = A_Series.dropna()
+                    # B Series
+                    B_Series = series_list[B_index][1:]
+                    B_Series = pd.to_numeric(B_Series, errors='coerce')
+                    B_Series = B_Series.fillna(0)
+                    B_Series = B_Series.dropna()
+
+                    # Final G Series
+                    C_Series = A_Series + (G_differ_TK - A_index_value) * (B_Series - A_Series) / (
+                                B_index_value - A_index_value)
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                elif G_differ_TK == max(Thickness_list):
+                    print("max")
+                    A_index_value = Thickness_list_2[index_G_differ_TK - 2]
+                    B_index_value = Thickness_list_2[index_G_differ_TK - 1]
+                    Thickness_list.remove(Thickness_list[0])
+                    A_index = Thickness_list.index(A_index_value)
+                    B_index = Thickness_list.index(B_index_value)
+                    # A Series
+                    A_Series = series_list[A_index][1:]
+                    A_Series = pd.to_numeric(A_Series, errors='coerce')
+                    A_Series = A_Series.fillna(0)
+                    A_Series = A_Series.dropna()
+                    # B Series
+                    B_Series = series_list[B_index][1:]
+                    B_Series = pd.to_numeric(B_Series, errors='coerce')
+                    B_Series = B_Series.fillna(0)
+                    B_Series = B_Series.dropna()
+                    # Final R Series
+                    C_Series = A_Series + (G_differ_TK - A_index_value) * (B_Series - A_Series) / (
+                                B_index_value - A_index_value)
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                elif G_differ_TK in (Thickness_list[1:]):
+                    print("equal")
+                    # 取得對應的索引
+                    Thickness_list.remove(Thickness_list[0])
+                    equal_index = Thickness_list.index(G_differ_TK)
+                    #print("Equal Index:", equal_index)
+                    #print("Equal Value:", R_differ_TK)
+                    C_Series = series_list[equal_index][1:]
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                else:
+                    print("mid")
+                    #print("R_differ_TK",R_differ_TK)
+                    #print("Thickness_list[1:]",Thickness_list[1:])
+                    A_index_value = Thickness_list_2[index_G_differ_TK - 1]
+                    #print("A_index_value",A_index_value)
+                    B_index_value = Thickness_list_2[index_G_differ_TK + 1]
+                    #print("B_index_value", B_index_value)
+                    Thickness_list.remove(Thickness_list[0])
+                    A_index = Thickness_list.index(A_index_value)
+                    #print("A_index",A_index)
+                    #print("Thickness_list",Thickness_list)
+                    B_index = Thickness_list.index(B_index_value)
+                    #print("B_index", B_index)
+                    # A Series
+                    A_Series = series_list[A_index][1:]
+                    A_Series = pd.to_numeric(A_Series, errors='coerce')
+                    A_Series = A_Series.fillna(0)
+                    A_Series = A_Series.dropna()
+                    #print("A_Series",A_Series)
+                    # B Series
+                    B_Series = series_list[B_index][1:]
+                    B_Series = pd.to_numeric(B_Series, errors='coerce')
+                    B_Series = B_Series.fillna(0)
+                    B_Series = B_Series.dropna()
+                    #print("B_Series", B_Series)
+
+                    # Final R Series
+                    C_Series = A_Series + (G_differ_TK - A_index_value) * (B_Series - A_Series) / (B_index_value - A_index_value)
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                # 關閉連線
+                connection_GCF_Differ.close()
+                print("C_Series",C_Series)
+                return C_Series
         else:
+            # 防呆反灰設定
+            self.G_differ_box.setEnabled(False)
+            self.G_differ_table.setEnabled(False)
+            self.G_differ_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.G_differ_table.setStyleSheet(QCOMBOBOXDISABLE)
             C_Series = 1
             print("GCF_Differ:未選,默認1")
             return C_Series
 
     def calculate_BCF_Differ(self):
         if self.B_differ_mode.currentText() == "自訂":
+            # 防呆反灰設定
+            self.B_differ_box.setEnabled(True)
+            self.B_differ_table.setEnabled(True)
+            self.B_differ_box.setStyleSheet(QCOMBOXSETTING)
+            self.B_differ_table.setStyleSheet(QCOMBOBOXTABLESELECT)
             print("in_BCF_Differ自訂")
             connection_BCF_Differ = sqlite3.connect("BCF_Differ_spectrum.db")
             cursor_BCF_Differ = connection_BCF_Differ.cursor()
@@ -2211,118 +2516,132 @@ class Color_Enter(QWidget):
             TK_record = []
             series_list_length = len(series_list)
             for i in range(series_list_length):
-                TK_record.append(float(series_list[i].iloc[0]))
+                try:
+                    TK_record.append(float(series_list[i].iloc[0]))
+                except ValueError:
+                    C_Series = 1
+                    # 發生錯誤時，忽略並繼續執行
+                    return C_Series
             self.B_differ_TK_edit_label.setText(f"TKrange: {min(TK_record):.2f}~{max(TK_record):.2f}")
 
             #print("series_list", series_list)
-            B_differ_TK = float(self.B_differ_TK_edit.text())
-            Thickness_list = [B_differ_TK]
-            for i in range(series_list_length):
-                Thickness_list.append(float(series_list[i].iloc[0]))
-                print(series_list[i].iloc[0])
-            print("Thickness_list",Thickness_list)
-            #print(max(Thickness_list))
-            # print(sorted(Thickness_list))
-            Thickness_list_2 = sorted(Thickness_list)
-            print("Thickness_list_2", Thickness_list_2)
-            index_B_differ_TK = Thickness_list_2.index(B_differ_TK)
-            #print(Thickness_list_2.index(B_differ_TK))
-            # 輸入厚度的三種情況
-            if B_differ_TK == min(Thickness_list):
-                print("min")
-                A_index_value = Thickness_list_2[index_B_differ_TK + 1]
-                #print("A_index_value", A_index_value)
-                B_index_value = Thickness_list_2[index_B_differ_TK + 2]
-                #print("B_index_value", B_index_value)
-                Thickness_list.remove(Thickness_list[0])
-                A_index = Thickness_list.index(A_index_value)
-                #print("A_index", A_index)
-                B_index = Thickness_list.index(B_index_value)
-                #print("B_index", B_index)
-                # A Series
-                A_Series = series_list[A_index][1:]
-                A_Series = pd.to_numeric(A_Series, errors='coerce')
-                A_Series = A_Series.fillna(0)
-                A_Series = A_Series.dropna()
-                # B Series
-                B_Series = series_list[B_index][1:]
-                B_Series = pd.to_numeric(B_Series, errors='coerce')
-                B_Series = B_Series.fillna(0)
-                B_Series = B_Series.dropna()
+            if self.B_differ_TK_edit.text() == "":
+                C_Series = 1
+                return C_Series
+            elif self.B_differ_TK_edit.text() !="":
+                B_differ_TK = float(self.B_differ_TK_edit.text())
+                Thickness_list = [B_differ_TK]
+                for i in range(series_list_length):
+                    Thickness_list.append(float(series_list[i].iloc[0]))
+                    print(series_list[i].iloc[0])
+                print("Thickness_list",Thickness_list)
+                #print(max(Thickness_list))
+                # print(sorted(Thickness_list))
+                Thickness_list_2 = sorted(Thickness_list)
+                print("Thickness_list_2", Thickness_list_2)
+                index_B_differ_TK = Thickness_list_2.index(B_differ_TK)
+                #print(Thickness_list_2.index(B_differ_TK))
+                # 輸入厚度的三種情況
+                if B_differ_TK == min(Thickness_list):
+                    print("min")
+                    A_index_value = Thickness_list_2[index_B_differ_TK + 1]
+                    #print("A_index_value", A_index_value)
+                    B_index_value = Thickness_list_2[index_B_differ_TK + 2]
+                    #print("B_index_value", B_index_value)
+                    Thickness_list.remove(Thickness_list[0])
+                    A_index = Thickness_list.index(A_index_value)
+                    #print("A_index", A_index)
+                    B_index = Thickness_list.index(B_index_value)
+                    #print("B_index", B_index)
+                    # A Series
+                    A_Series = series_list[A_index][1:]
+                    A_Series = pd.to_numeric(A_Series, errors='coerce')
+                    A_Series = A_Series.fillna(0)
+                    A_Series = A_Series.dropna()
+                    # B Series
+                    B_Series = series_list[B_index][1:]
+                    B_Series = pd.to_numeric(B_Series, errors='coerce')
+                    B_Series = B_Series.fillna(0)
+                    B_Series = B_Series.dropna()
 
-                # Final B Series
-                C_Series = A_Series + (B_differ_TK - A_index_value) * (B_Series - A_Series) / (
-                            B_index_value - A_index_value)
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            elif B_differ_TK == max(Thickness_list):
-                print("max")
-                A_index_value = Thickness_list_2[index_B_differ_TK - 2]
-                B_index_value = Thickness_list_2[index_B_differ_TK - 1]
-                Thickness_list.remove(Thickness_list[0])
-                A_index = Thickness_list.index(A_index_value)
-                B_index = Thickness_list.index(B_index_value)
-                # A Series
-                A_Series = series_list[A_index][1:]
-                A_Series = pd.to_numeric(A_Series, errors='coerce')
-                A_Series = A_Series.fillna(0)
-                A_Series = A_Series.dropna()
-                # B Series
-                B_Series = series_list[B_index][1:]
-                B_Series = pd.to_numeric(B_Series, errors='coerce')
-                B_Series = B_Series.fillna(0)
-                B_Series = B_Series.dropna()
-                # Final R Series
-                C_Series = A_Series + (B_differ_TK - A_index_value) * (B_Series - A_Series) / (
-                            B_index_value - A_index_value)
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            elif B_differ_TK in (Thickness_list[1:]):
-                print("equal")
-                # 取得對應的索引
-                Thickness_list.remove(Thickness_list[0])
-                equal_index = Thickness_list.index(B_differ_TK)
-                #print("Equal Index:", equal_index)
-                #print("Equal Value:", R_differ_TK)
-                C_Series = series_list[equal_index][1:]
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            else:
-                print("mid")
-                #print("R_differ_TK",R_differ_TK)
-                #print("Thickness_list[1:]",Thickness_list[1:])
-                A_index_value = Thickness_list_2[index_B_differ_TK - 1]
-                #print("A_index_value",A_index_value)
-                B_index_value = Thickness_list_2[index_B_differ_TK + 1]
-                #print("B_index_value", B_index_value)
-                Thickness_list.remove(Thickness_list[0])
-                A_index = Thickness_list.index(A_index_value)
-                #print("A_index",A_index)
-                #print("Thickness_list",Thickness_list)
-                B_index = Thickness_list.index(B_index_value)
-                #print("B_index", B_index)
-                # A Series
-                A_Series = series_list[A_index][1:]
-                A_Series = pd.to_numeric(A_Series, errors='coerce')
-                A_Series = A_Series.fillna(0)
-                A_Series = A_Series.dropna()
-                #print("A_Series",A_Series)
-                # B Series
-                B_Series = series_list[B_index][1:]
-                B_Series = pd.to_numeric(B_Series, errors='coerce')
-                B_Series = B_Series.fillna(0)
-                B_Series = B_Series.dropna()
-                #print("B_Series", B_Series)
+                    # Final B Series
+                    C_Series = A_Series + (B_differ_TK - A_index_value) * (B_Series - A_Series) / (
+                                B_index_value - A_index_value)
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                elif B_differ_TK == max(Thickness_list):
+                    print("max")
+                    A_index_value = Thickness_list_2[index_B_differ_TK - 2]
+                    B_index_value = Thickness_list_2[index_B_differ_TK - 1]
+                    Thickness_list.remove(Thickness_list[0])
+                    A_index = Thickness_list.index(A_index_value)
+                    B_index = Thickness_list.index(B_index_value)
+                    # A Series
+                    A_Series = series_list[A_index][1:]
+                    A_Series = pd.to_numeric(A_Series, errors='coerce')
+                    A_Series = A_Series.fillna(0)
+                    A_Series = A_Series.dropna()
+                    # B Series
+                    B_Series = series_list[B_index][1:]
+                    B_Series = pd.to_numeric(B_Series, errors='coerce')
+                    B_Series = B_Series.fillna(0)
+                    B_Series = B_Series.dropna()
+                    # Final R Series
+                    C_Series = A_Series + (B_differ_TK - A_index_value) * (B_Series - A_Series) / (
+                                B_index_value - A_index_value)
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                elif B_differ_TK in (Thickness_list[1:]):
+                    print("equal")
+                    # 取得對應的索引
+                    Thickness_list.remove(Thickness_list[0])
+                    equal_index = Thickness_list.index(B_differ_TK)
+                    #print("Equal Index:", equal_index)
+                    #print("Equal Value:", R_differ_TK)
+                    C_Series = series_list[equal_index][1:]
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                else:
+                    print("mid")
+                    #print("R_differ_TK",R_differ_TK)
+                    #print("Thickness_list[1:]",Thickness_list[1:])
+                    A_index_value = Thickness_list_2[index_B_differ_TK - 1]
+                    #print("A_index_value",A_index_value)
+                    B_index_value = Thickness_list_2[index_B_differ_TK + 1]
+                    #print("B_index_value", B_index_value)
+                    Thickness_list.remove(Thickness_list[0])
+                    A_index = Thickness_list.index(A_index_value)
+                    #print("A_index",A_index)
+                    #print("Thickness_list",Thickness_list)
+                    B_index = Thickness_list.index(B_index_value)
+                    #print("B_index", B_index)
+                    # A Series
+                    A_Series = series_list[A_index][1:]
+                    A_Series = pd.to_numeric(A_Series, errors='coerce')
+                    A_Series = A_Series.fillna(0)
+                    A_Series = A_Series.dropna()
+                    #print("A_Series",A_Series)
+                    # B Series
+                    B_Series = series_list[B_index][1:]
+                    B_Series = pd.to_numeric(B_Series, errors='coerce')
+                    B_Series = B_Series.fillna(0)
+                    B_Series = B_Series.dropna()
+                    #print("B_Series", B_Series)
 
-                # Final R Series
-                C_Series = A_Series + (B_differ_TK - A_index_value) * (B_Series - A_Series) / (B_index_value - A_index_value)
-                # 在計算完 C_Series 後，加上以下代碼,將index重置
-                C_Series = C_Series.reset_index(drop=True)
-            # 關閉連線
-            connection_BCF_Differ.close()
-            print("C_Series",C_Series)
-            return C_Series
+                    # Final R Series
+                    C_Series = A_Series + (B_differ_TK - A_index_value) * (B_Series - A_Series) / (B_index_value - A_index_value)
+                    # 在計算完 C_Series 後，加上以下代碼,將index重置
+                    C_Series = C_Series.reset_index(drop=True)
+                # 關閉連線
+                connection_BCF_Differ.close()
+                print("C_Series",C_Series)
+                return C_Series
         else:
+            # 防呆反灰設定
+            self.B_differ_box.setEnabled(False)
+            self.B_differ_table.setEnabled(False)
+            self.B_differ_box.setStyleSheet(QCOMBOBOXDISABLE)
+            self.B_differ_table.setStyleSheet(QCOMBOBOXDISABLE)
             C_Series = 1
             print("BCF_Differ:未選,默認1")
             return C_Series
@@ -2511,7 +2830,7 @@ class Color_Enter(QWidget):
             W_Z_sum = W_Z.sum()
             self.W_x = W_X_sum / (W_X_sum + W_Y_sum + W_Z_sum)
             self.W_y = W_Y_sum / (W_X_sum + W_Y_sum + W_Z_sum)
-            W_T = R_T + G_T + B_T
+            W_T = W_Y_sum
             self.color_table.setItem(1, 1, QTableWidgetItem(f"{self.W_x:.3f}"))
             self.color_table.setItem(1, 2, QTableWidgetItem(f"{self.W_y:.3f}"))
             self.color_table.setItem(1, 3, QTableWidgetItem(f"{W_T:.3f}%"))
@@ -2580,7 +2899,7 @@ class Color_Enter(QWidget):
             WC_Z_sum = WC_Z.sum()
             WC_x = WC_X_sum / (WC_X_sum + WC_Y_sum + WC_Z_sum)
             WC_y = WC_Y_sum / (WC_X_sum + WC_Y_sum + WC_Z_sum)
-            WC_T = RC_T + GC_T + BC_T
+            WC_T = WC_Y_sum
             self.color_table.setItem(2, 1, QTableWidgetItem(f"{WC_x:.3f}"))
             self.color_table.setItem(2, 2, QTableWidgetItem(f"{WC_y:.3f}"))
             self.color_table.setItem(2, 3, QTableWidgetItem(f"{WC_T:.3f}%"))
@@ -3018,45 +3337,41 @@ class Color_Enter(QWidget):
 
     # Plot CIE jump
     def drawcie(self):
-        # 4組 x 和 y 色座標
+        # 4组 x 和 y 色坐标
         x_coords = [self.W_x, self.R_x, self.G_x, self.B_x]
         y_coords = [self.W_y, self.R_y, self.G_y, self.B_y]
 
-        # 轉換為 numpy array
-        x_coords_array = np.array(x_coords)
-        y_coords_array = np.array(y_coords)
-
-        # 將 xy 座標轉換為 CIE 1931 XYZ 三刺激值
-        XYZ = xy_to_XYZ(np.column_stack((x_coords_array, y_coords_array)))
-
-        # 將 XYZ 三刺激值轉換為 sRGB 顏色表示
-        RGB = XYZ_to_sRGB(XYZ)
-
-        # 顯示座標的顏色
-        # show=False 控制是否顯示即時的繪圖，當你設置 show=False 時，繪圖將不會立即顯示在畫面上，你可以在需要顯示的時候調用 plt.show()。
-        # 這樣可以讓你在繪製多個圖形時先完成所有的繪製操作再顯示，以提高效率。
-        for i in range(len(x_coords)):
-            XYZ = xy_to_XYZ(np.array([x_coords[i], y_coords[i]]))
+        # 将 xy 坐标转换为 CIE 1931 XYZ 三刺激值，并将它们转换为 sRGB 值
+        RGB_values = []
+        for x, y in zip(x_coords, y_coords):
+            XYZ = xy_to_XYZ(np.array([x, y]))
             RGB = XYZ_to_sRGB(XYZ)
-            plot_single_colour_swatch(RGB, swatch_name=f"Color {i + 1}", xy=(x_coords[i], y_coords[i]), show=False)
+            RGB_values.append(RGB)
 
-        # 顯示對應的顏色在 CIE 1931 色度圖上
-        plotting.models.plot_RGB_chromaticities_in_chromaticity_diagram(RGB, show=False)
+        # 转换为 numpy 数组
+        RGB_array = np.array(RGB_values)
 
-        # 使用 plt.scatter 添加自定義的標記
-        markers = ['o', 's', '^', '*']  # 可以根據需要更改標記形狀
+        # 显示座标的颜色
+        for i, (RGB, x, y) in enumerate(zip(RGB_array, x_coords, y_coords)):
+            plot_single_colour_swatch(RGB, swatch_name=f"Color {i + 1}", xy=(x, y), show=False)
+
+        # 显示对应的颜色在 CIE 1931 色度图上
+        # 注意：这里可能需要调整以适应您的具体需求
+        plotting.plot_ellipses_MacAdam1942_in_chromaticity_diagram_CIE1931(show=False)
+
+        # 使用 plt.scatter 添加自定义的标记
+        markers = ['o', 's', '^', '*']  # 可以根据需要更改标记形状
         labels = ['W', 'R', 'G', 'B']
-        # 設定外框的顏色為黑色
         edgecolors = 'black'
-        # 定義每個標記的顏色，這裡使用RGB表示，你可以根據需要調整顏色值
-        colors = [(1, 1, 1), (1, 0, 0), (0, 1, 0), (0, 0, 1)]
-        for x, y, marker, label, color in zip(x_coords, y_coords, markers, labels, colors):
-            plt.scatter(x, y, marker=marker, label=f'{label}:({x:.2f}, {y:.2f})', color=color,
+        for x, y, marker, label, RGB in zip(x_coords, y_coords, markers, labels, RGB_array):
+            # 确保颜色值在 0 到 1 的范围内
+            RGB_clipped = np.clip(RGB, 0, 1)
+            plt.scatter(x, y, marker=marker, label=f'{label}:({x:.2f}, {y:.2f})', c=[RGB_clipped],
                         edgecolors=edgecolors)
 
-        # 顯示圖例
+        # 显示图例
         plt.legend()
-        plt.show()  # 顯示最後一次更新的圖形
+        plt.show()  # 显示最后一次更新的图形
 
     # table更新function區--------------------------------------------------------------------------------------
 

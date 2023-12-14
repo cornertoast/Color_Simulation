@@ -14,6 +14,7 @@ from Setting import *
 import chardet
 import openpyxl
 import pandas as pd
+from signal_manager import global_signal_manager
 
 
 
@@ -230,6 +231,8 @@ class Light_Source_BLU(QWidget):
         # 關閉連線
         conn.close()
         self.updateTableComboBox()
+        # 在函數的最後發射信號
+        global_signal_manager.databaseUpdated.emit()
 
     def deleteColumn(self):
         # 刪除最後一列
@@ -270,6 +273,8 @@ class Light_Source_BLU(QWidget):
                 self.updateTableComboBox()
 
                 QMessageBox.information(self, "成功", f"成功刪除資料表 {table_name}", QMessageBox.Ok)
+                # 在函數的最後發射信號
+                global_signal_manager.databaseUpdated.emit()
 
     def clearForm(self):
         # 清除整個表格的內容
