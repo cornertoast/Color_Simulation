@@ -11,11 +11,11 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import sqlite3
 from Setting import *
-import chardet
+# import chardet
 import openpyxl
 import pandas as pd
 from signal_manager import global_signal_manager
-
+import re
 
 
 
@@ -81,6 +81,10 @@ class Light_Source_BLU(QWidget):
         self.table_delete_button = QPushButton("Delete_table")
         self.Form_clear_button = QPushButton("Form_clear")
         self.delete_column_button = QPushButton("Delete Column")
+        self.delete_select_column_button = QPushButton("Delete Select Column")
+        self.save_table_button = QPushButton("Save_current_table")
+        self.insert_column_button = QPushButton("Insert_Column")
+        self.paste_button = QPushButton("Excel_data_paste")
         # SelectQcombobox
         self.select_db_table = QComboBox()
         self.select_db_table.setStyleSheet(QCOMBOBOXTABLESELECT)
@@ -99,7 +103,11 @@ class Light_Source_BLU(QWidget):
         self.Light_Source_BLU_button_layout.addWidget(self.select_db_table, 1, 2)
         self.Light_Source_BLU_button_layout.addWidget(self.add_column_button, 2, 0)
         self.Light_Source_BLU_button_layout.addWidget(self.delete_column_button,2,1)
-        self.Light_Source_BLU_button_layout .addWidget(self.table,3,0,1,3)
+        self.Light_Source_BLU_button_layout.addWidget(self.delete_select_column_button, 2, 2)
+        self.Light_Source_BLU_button_layout.addWidget(self.save_table_button, 3, 0)
+        self.Light_Source_BLU_button_layout.addWidget(self.insert_column_button, 3, 1)
+        self.Light_Source_BLU_button_layout.addWidget(self.paste_button, 3, 2)
+        self.Light_Source_BLU_button_layout .addWidget(self.table,4,0,1,3)
 
         self.setLayout(self.Light_Source_BLU_button_layout)
 
@@ -115,6 +123,10 @@ class Light_Source_BLU(QWidget):
         self.table_delete_button.clicked.connect(self.delete_table)
         self.Form_clear_button.clicked.connect(self.clearForm)
         self.delete_column_button.clicked.connect(self.deleteColumn)
+        self.delete_select_column_button.clicked.connect(self.deleteSelectedColumn)
+        self.save_table_button.clicked.connect(self.save_table)
+        self.insert_column_button.clicked.connect(self.insertColumnRight)
+        self.paste_button.clicked.connect(self.paste_from_clipboard)
 
     def loadExcelData(self):
         # path = "F:\Program-learning\pycharmlearing\Side_project\OPT-color-pyside\測試用頻譜.xlsx"
@@ -151,6 +163,8 @@ class Light_Source_BLU(QWidget):
             row_index += 1
 
         self.createDatabaseFromTable()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
 
 
         # # 創建或連接到 SQLite 資料庫
@@ -175,6 +189,52 @@ class Light_Source_BLU(QWidget):
         # 更新 SQLite 資料庫路徑
         # self.db_path = db_path
 
+    def paste_from_clipboard(self):
+        clipboard = QApplication.clipboard()
+        clipboard_text = clipboard.text()
+
+        # 按行分割文本
+        rows = clipboard_text.split('\n')
+
+        # 檢查是否有數據
+        if not rows:
+            return
+
+        # 獲取當前選中的單元格或列的索引
+        selected_indexes = self.table.selectedIndexes()
+        if selected_indexes:
+            start_row = selected_indexes[0].row()  # 取得第一個選中項目的行索引
+            start_col = selected_indexes[0].column()  # 取得第一個選中項目的列索引
+        else:
+            # 如果沒有選中項目，則從(0, 0)開始
+            start_row = 0
+            start_col = 0
+
+        # 提取表頭（假設第一行是表頭）
+        headers = rows[0].split('\t')
+        existing_column_count = self.table.columnCount()
+        new_column_count = len(headers)
+
+        # 根據需要擴充表格的列
+        for _ in range(max(0, start_col + new_column_count - existing_column_count)):
+            self.table.insertColumn(existing_column_count)
+            existing_column_count += 1
+
+        # 設置表頭
+        for i, header in enumerate(headers):
+            if start_col + i < existing_column_count:
+                self.table.setHorizontalHeaderItem(start_col + i, QTableWidgetItem(header))
+
+        # 更新表格數據，從第二行開始
+        for row_index, row_data in enumerate(rows[1:], start=start_row):
+            columns = row_data.split('\t')
+            for col_index, cell_value in enumerate(columns, start=start_col):
+                if row_index < self.table.rowCount() and col_index < self.table.columnCount():
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(cell_value))
+
+        # 重新調整列寬以適應內容
+        self.table.resizeColumnsToContents()
+
     def createDatabaseFromTable(self):
         # 使用 QInputDialog 取得使用者輸入的 table name
         table_name, ok = QInputDialog.getText(self, "輸入 Table 名稱", "請輸入 Table 名稱:")
@@ -182,7 +242,14 @@ class Light_Source_BLU(QWidget):
         if not ok or not table_name:
             # 使用者取消或未輸入名稱，結束函數
             return
+        # 顯示執行中的訊息框
+        processing_msg = QMessageBox(self)
+        processing_msg.setWindowTitle("執行中,請稍後")
+        processing_msg.setText("正在進行存取操作...")
 
+        # processing_msg.setStandardButtons(QMessageBox.NoButton)
+        processing_msg.show()
+        QApplication.processEvents()  # 使應用程式能夠處理事件並更新介面
         # 創建或連接到 SQLite 資料庫
         conn = sqlite3.connect("blu_database.db")
         cursor = conn.cursor()
@@ -231,8 +298,78 @@ class Light_Source_BLU(QWidget):
         # 關閉連線
         conn.close()
         self.updateTableComboBox()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
         # 在函數的最後發射信號
         global_signal_manager.databaseUpdated.emit()
+        # 關閉執行中的訊息框
+        processing_msg.close()
+        # 存取成功的彈出視窗
+        QMessageBox.information(self, "存取成功", "表格存取成功！", QMessageBox.Ok)
+
+    def save_table(self, table_name):
+        # 確認存取的彈出視窗
+        confirm_reply = QMessageBox.question(self, "確認存取", "確定要存取表格嗎？",
+                                             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if confirm_reply == QMessageBox.No:
+            # 如果使用者選擇「否」，則中止操作
+            return
+        # 顯示執行中的訊息框
+        processing_msg = QMessageBox(self)
+        processing_msg.setWindowTitle("執行中,請稍後")
+        processing_msg.setText("正在進行存取操作...")
+
+        # processing_msg.setStandardButtons(QMessageBox.NoButton)
+        processing_msg.show()
+        QApplication.processEvents()  # 使應用程式能夠處理事件並更新介面
+        # 創建或連接到 SQLite 資料庫
+        conn = sqlite3.connect("blu_database.db")
+        cursor = conn.cursor()
+        table_name = self.select_db_table.currentText()
+
+        # 檢查表格是否存在
+        cursor.execute(f'SELECT name FROM sqlite_master WHERE type="table" AND name=?;', (table_name,))
+        existing_table = cursor.fetchone()
+
+        if existing_table:
+            # 如果表格存在，則刪除現有表格
+            cursor.execute(f'DROP TABLE IF EXISTS "{table_name}";')
+
+        # 取得表格的標題
+        header_items = [self.table.horizontalHeaderItem(i).text() if self.table.horizontalHeaderItem(
+            i) is not None else f'Column{i}' for i in range(self.table.columnCount())]
+
+        # 檢查標題是否唯一
+        if len(set(header_items)) != len(header_items):
+            # 如果有重複，處理重複的標題
+            header_items = [f'{header}_{i}' for i, header in enumerate(header_items)]
+
+        header_str = ', '.join(f'"{header}" TEXT' for header in header_items)
+
+        # 創建資料表
+        cursor.execute(f'CREATE TABLE IF NOT EXISTS "{table_name}" ({header_str});')
+
+        # 匯入資料
+        for row in range(self.table.rowCount()):
+            row_values = [self.table.item(row, col).text() if self.table.item(row, col) is not None else '' for col in
+                          range(self.table.columnCount())]
+            placeholder = ', '.join('?' for _ in row_values)
+            cursor.execute(f'INSERT INTO "{table_name}" VALUES ({placeholder});', row_values)
+
+        # 提交變更
+        conn.commit()
+
+        # 關閉連線
+        conn.close()
+        self.updateTableComboBox()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
+        # 發射信號以更新界面
+        global_signal_manager.databaseUpdated.emit()
+        # 關閉執行中的訊息框
+        processing_msg.close()
+        # 存取成功的彈出視窗
+        QMessageBox.information(self, "存取成功", "表格存取成功！", QMessageBox.Ok)
 
     def deleteColumn(self):
         # 刪除最後一列
@@ -240,6 +377,65 @@ class Light_Source_BLU(QWidget):
 
         if current_column_count > 0:
             self.table.removeColumn(current_column_count - 1)
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
+
+    def deleteSelectedColumn(self):
+        # 獲取選中的範圍
+        selected_ranges = self.table.selectedRanges()
+
+        # 如果沒有選中範圍，則直接返回
+        if not selected_ranges:
+            return
+
+        # 獲取要刪除的列的索引列表
+        columns_to_delete = set()
+        for selected_range in selected_ranges:
+            for col in range(selected_range.leftColumn(), selected_range.rightColumn() + 1):
+                columns_to_delete.add(col)
+
+        # 從最大索引開始刪除列，以避免索引變化導致錯誤
+        for col in sorted(columns_to_delete, reverse=True):
+            self.table.removeColumn(col)
+
+        # 更新表格
+        self.table.update()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
+
+    def insertColumnRight(self):
+        selected_indexes = self.table.selectedIndexes()
+        if selected_indexes:
+            # 獲取選中的列數
+            column = selected_indexes[0].column()
+            # 在選中列的右側插入新列
+            self.table.insertColumn(column + 1)
+
+            # 新增對應的表頭
+            new_header_item = QTableWidgetItem(f"Column{column + 1}")
+            self.table.setHorizontalHeaderItem(column + 1, new_header_item)
+
+            # # 更新其餘列的表頭
+            # for i in range(column + 2, self.table.columnCount()):
+            #     existing_header = self.table.horizontalHeaderItem(i)
+            #     if existing_header:
+            #         existing_header.setText(f"Column{i}")
+
+            # 進行表頭編輯
+            self.table.horizontalHeader().edit_line.setGeometry(
+                self.table.horizontalHeader().sectionViewportPosition(column + 1),
+                0,
+                self.table.horizontalHeader().sectionSize(column + 1),
+                self.table.horizontalHeader().height()
+            )
+            self.table.horizontalHeader().edit_line.setText(new_header_item.text())
+            self.table.horizontalHeader().edit_line.show()
+            self.table.horizontalHeader().edit_line.setFocus()
+
+            self.table.selectColumn(column + 1)
+
+            # 加載數據後自動調整所有欄位的寬度以適應內容
+            self.table.resizeColumnsToContents()
 
     def delete_table(self):
         # 取得現有的資料表
@@ -262,6 +458,14 @@ class Light_Source_BLU(QWidget):
                                          QMessageBox.No)
 
             if reply == QMessageBox.Yes:
+                # 顯示執行中的訊息框
+                processing_msg = QMessageBox(self)
+                processing_msg.setWindowTitle("執行中,請稍後")
+                processing_msg.setText("正在進行存取操作...")
+
+                # processing_msg.setStandardButtons(QMessageBox.NoButton)
+                processing_msg.show()
+                QApplication.processEvents()  # 使應用程式能夠處理事件並更新介面
                 # 使用者確認後，執行刪除
                 conn = sqlite3.connect("blu_database.db")
                 cursor = conn.cursor()
@@ -275,6 +479,10 @@ class Light_Source_BLU(QWidget):
                 QMessageBox.information(self, "成功", f"成功刪除資料表 {table_name}", QMessageBox.Ok)
                 # 在函數的最後發射信號
                 global_signal_manager.databaseUpdated.emit()
+                # 關閉執行中的訊息框
+                processing_msg.close()
+                # 存取成功的彈出視窗
+                QMessageBox.information(self, "存取成功", "表格存取成功！", QMessageBox.Ok)
 
     def clearForm(self):
         # 清除整個表格的內容
@@ -327,6 +535,10 @@ class Light_Source_BLU(QWidget):
         self.table.horizontalHeader().edit_line.setText(new_header_item.text())
         self.table.horizontalHeader().edit_line.show()
         self.table.horizontalHeader().edit_line.setFocus()
+        self.table.selectColumn(current_column_count)
+
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
 
     # # 創建或連接到 SQLite 資料庫
         # db_path = "blu_1e.db"
@@ -410,13 +622,13 @@ class Light_Source_BLU(QWidget):
         connection = sqlite3.connect("blu_database.db")
         cursor = connection.cursor()
         # 確保表格存在
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='blu_data';")
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='blu_data-範例檔勿刪';")
         if cursor.fetchone() is None:
             connection.close()
             return  # 如果表格不存在，直接返回
 
         # 獲取表格的標題
-        cursor.execute("PRAGMA table_info(blu_data);")
+        cursor.execute("PRAGMA table_info('blu_data-範例檔勿刪');")
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
 
@@ -426,7 +638,7 @@ class Light_Source_BLU(QWidget):
         self.table.setHorizontalHeaderLabels(header_labels)
 
         # 獲取表格數據
-        result = connection.execute("SELECT * FROM blu_data")
+        result = connection.execute("SELECT * FROM 'blu_data-範例檔勿刪'")
 
         for row_number, row_data in enumerate(result):
             self.table.insertRow(row_number)
@@ -509,6 +721,8 @@ class Light_Source_BLU(QWidget):
             #print("row data", row_data)
         connection.commit()
         connection.close()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
 
     def getTableHeader(self,table_name):
         # 获取表头信息

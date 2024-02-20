@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QGridLa
 
 from PySide6.QtGui import QKeyEvent,QColor,QPalette,QStandardItem,QKeySequence,QShortcut
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt,Signal
 from PySide6.QtCharts import QChart
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -14,6 +14,8 @@ from Setting import *
 import chardet
 import openpyxl
 import pandas as pd
+from signal_manager import global_signal_manager
+import re
 
 class EditableHeader(QHeaderView):
     def __init__(self, orientation, parent):
@@ -39,6 +41,8 @@ class EditableHeader(QHeaderView):
         self.edit_line.hide()
 
 class CIE_Spectrum(QWidget):
+    # 定義一個信號，傳遞標題列表
+    tablename_signal = Signal(str)
     def __init__(self):
         super().__init__()
 
@@ -66,8 +70,15 @@ class CIE_Spectrum(QWidget):
         self.add_column_button = QPushButton("Add_column")
         self.create_data_button = QPushButton("Create_Table")
         self.table_delete_button = QPushButton("Delete_table")
+        self.Form_clear_button = QPushButton("Form_clear")
+        self.delete_column_button = QPushButton("Delete Column")
+        self.delete_select_column_button = QPushButton("Delete Select Column")
+        self.save_table_button = QPushButton("Save_current_table")
+        self.insert_column_button = QPushButton("Insert_Column")
+        self.paste_button = QPushButton("Excel_data_paste")
         # SelectQcombobox
         self.select_db_table = QComboBox()
+        self.select_db_table.setStyleSheet(QCOMBOBOXTABLESELECT)
         self.updateTableComboBox()  # 初始化時更新 ComboBox 選項
         self.select_db_table.currentIndexChanged.connect(self.tableSelectionChanged)
 
@@ -75,11 +86,17 @@ class CIE_Spectrum(QWidget):
         self.CIE_Spectrum_layout = QGridLayout()
         self.CIE_Spectrum_layout.addWidget(self.import_data_button, 0, 0)
         self.CIE_Spectrum_layout.addWidget(self.export_data_button, 0, 1)
-        self.CIE_Spectrum_layout.addWidget(self.add_column_button, 0, 2)
+        self.CIE_Spectrum_layout.addWidget(self.Form_clear_button, 0, 2)
         self.CIE_Spectrum_layout.addWidget(self.create_data_button, 1, 0)
-        self.CIE_Spectrum_layout.addWidget(self.select_db_table, 1, 1)
-        self.CIE_Spectrum_layout.addWidget(self.table_delete_button, 1, 2)
-        self.CIE_Spectrum_layout .addWidget(self.table, 2, 0, 1, 3)
+        self.CIE_Spectrum_layout.addWidget(self.table_delete_button, 1, 1)
+        self.CIE_Spectrum_layout.addWidget(self.select_db_table, 1, 2)
+        self.CIE_Spectrum_layout.addWidget(self.add_column_button, 2, 0)
+        self.CIE_Spectrum_layout.addWidget(self.delete_column_button, 2, 1)
+        self.CIE_Spectrum_layout.addWidget(self.delete_select_column_button, 2, 2)
+        self.CIE_Spectrum_layout.addWidget(self.save_table_button, 3, 0)
+        self.CIE_Spectrum_layout.addWidget(self.insert_column_button, 3, 1)
+        self.CIE_Spectrum_layout.addWidget(self.paste_button, 3, 2)
+        self.CIE_Spectrum_layout.addWidget(self.table, 4, 0, 1, 3)
 
         self.setLayout(self.CIE_Spectrum_layout)
 
@@ -93,6 +110,12 @@ class CIE_Spectrum(QWidget):
         self.add_column_button.clicked.connect(self.addColumn)
         self.create_data_button.clicked.connect(self.createDatabaseFromTable)
         self.table_delete_button.clicked.connect(self.delete_table)
+        self.Form_clear_button.clicked.connect(self.clearForm)
+        self.delete_column_button.clicked.connect(self.deleteColumn)
+        self.delete_select_column_button.clicked.connect(self.deleteSelectedColumn)
+        self.save_table_button.clicked.connect(self.save_table)
+        self.insert_column_button.clicked.connect(self.insertColumnRight)
+        self.paste_button.clicked.connect(self.paste_from_clipboard)
 
     def loadExcelData(self):
         # path = "F:\Program-learning\pycharmlearing\Side_project\OPT-color-pyside\測試用頻譜.xlsx"
@@ -120,29 +143,16 @@ class CIE_Spectrum(QWidget):
         # header_row_str = ', '.join(f'"{header}" TEXT' for header in header_row_values)
 
         for value_tuple in list_values[1:]:
-            col_index = 0
-            for value in value_tuple:
-                if value is None:
-                    # 如果值為 None，直接設定到表格中
-                    self.table.setItem(row_index, col_index, QTableWidgetItem(""))
-                    print(f"Value: None")
-                elif isinstance(value, str):
-                    # 如果是字串，直接設定到表格中
-                    self.table.setItem(row_index, col_index, QTableWidgetItem(value))
-                    print(f"Value (String): {value}")
-                else:
-                    # 將讀取到的數字轉為浮點數
-                    float_value = float(value)
-
-                    # 將數字限制到小數點後15位
-                    rounded_value = round(float_value, 15)
-
-                    # 將數字轉為字串，並設定到表格中
-                    self.table.setItem(row_index, col_index, QTableWidgetItem(str(rounded_value)))
-                    print(f"Value (Float): {rounded_value}")
-
-                col_index += 1
+            #print(value_tuple)
+            if len(value_tuple) <= self.table.columnCount():  # 檢查欄數是否超過預期
+                col_index = 0
+                for value in value_tuple:
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(str(value)))
+                    col_index += 1
             row_index += 1
+        self.createDatabaseFromTable()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
         # # 創建或連接到 SQLite 資料庫
         # db_path = "blu_database.db"
         # conn = sqlite3.connect(db_path)
@@ -165,6 +175,52 @@ class CIE_Spectrum(QWidget):
         # 更新 SQLite 資料庫路徑
         # self.db_path = db_path
 
+    def paste_from_clipboard(self):
+        clipboard = QApplication.clipboard()
+        clipboard_text = clipboard.text()
+
+        # 按行分割文本
+        rows = clipboard_text.split('\n')
+
+        # 檢查是否有數據
+        if not rows:
+            return
+
+        # 獲取當前選中的單元格或列的索引
+        selected_indexes = self.table.selectedIndexes()
+        if selected_indexes:
+            start_row = selected_indexes[0].row()  # 取得第一個選中項目的行索引
+            start_col = selected_indexes[0].column()  # 取得第一個選中項目的列索引
+        else:
+            # 如果沒有選中項目，則從(0, 0)開始
+            start_row = 0
+            start_col = 0
+
+        # 提取表頭（假設第一行是表頭）
+        headers = rows[0].split('\t')
+        existing_column_count = self.table.columnCount()
+        new_column_count = len(headers)
+
+        # 根據需要擴充表格的列
+        for _ in range(max(0, start_col + new_column_count - existing_column_count)):
+            self.table.insertColumn(existing_column_count)
+            existing_column_count += 1
+
+        # 設置表頭
+        for i, header in enumerate(headers):
+            if start_col + i < existing_column_count:
+                self.table.setHorizontalHeaderItem(start_col + i, QTableWidgetItem(header))
+
+        # 更新表格數據，從第二行開始
+        for row_index, row_data in enumerate(rows[1:], start=start_row):
+            columns = row_data.split('\t')
+            for col_index, cell_value in enumerate(columns, start=start_col):
+                if row_index < self.table.rowCount() and col_index < self.table.columnCount():
+                    self.table.setItem(row_index, col_index, QTableWidgetItem(cell_value))
+
+        # 重新調整列寬以適應內容
+        self.table.resizeColumnsToContents()
+
     def createDatabaseFromTable(self):
         # 使用 QInputDialog 取得使用者輸入的 table name
         table_name, ok = QInputDialog.getText(self, "輸入 Table 名稱", "請輸入 Table 名稱:")
@@ -176,6 +232,23 @@ class CIE_Spectrum(QWidget):
         # 創建或連接到 SQLite 資料庫
         conn = sqlite3.connect("CIE_spectrum.db")
         cursor = conn.cursor()
+
+        # 檢查表格是否存在
+        cursor.execute(f'SELECT name FROM sqlite_master WHERE type="table" AND name=?;', (table_name,))
+        existing_table = cursor.fetchone()
+
+        if existing_table:
+            # 如果表格存在，顯示確認對話框
+            reply = QMessageBox.question(self, "確認覆蓋", f"已存在名稱為 '{table_name}' 的表格，是否確認覆蓋？",
+                                         QMessageBox.Yes | QMessageBox.No)
+
+            if reply == QMessageBox.No:
+                # 使用者取消覆蓋，結束函數
+                conn.close()
+                return
+            else:
+                # 使用者確認覆蓋，刪除現有表格
+                cursor.execute(f'DROP TABLE IF EXISTS "{table_name}";')
 
         # 取得表格的標題
         header_items = [self.table.horizontalHeaderItem(i).text() if self.table.horizontalHeaderItem(
@@ -204,6 +277,122 @@ class CIE_Spectrum(QWidget):
         # 關閉連線
         conn.close()
         self.updateTableComboBox()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
+        # 在函數的最後發射信號
+        global_signal_manager.databaseUpdated.emit()
+
+    def save_table(self, table_name):
+        # 創建或連接到 SQLite 資料庫
+        conn = sqlite3.connect("CIE_spectrum.db")
+        cursor = conn.cursor()
+        table_name = self.select_db_table.currentText()
+
+        # 檢查表格是否存在
+        cursor.execute(f'SELECT name FROM sqlite_master WHERE type="table" AND name=?;', (table_name,))
+        existing_table = cursor.fetchone()
+
+        if existing_table:
+            # 如果表格存在，則刪除現有表格
+            cursor.execute(f'DROP TABLE IF EXISTS "{table_name}";')
+
+        # 取得表格的標題
+        header_items = [self.table.horizontalHeaderItem(i).text() if self.table.horizontalHeaderItem(
+            i) is not None else f'Column{i}' for i in range(self.table.columnCount())]
+
+        # 檢查標題是否唯一
+        if len(set(header_items)) != len(header_items):
+            # 如果有重複，處理重複的標題
+            header_items = [f'{header}_{i}' for i, header in enumerate(header_items)]
+
+        header_str = ', '.join(f'"{header}" TEXT' for header in header_items)
+
+        # 創建資料表
+        cursor.execute(f'CREATE TABLE IF NOT EXISTS "{table_name}" ({header_str});')
+
+        # 匯入資料
+        for row in range(self.table.rowCount()):
+            row_values = [self.table.item(row, col).text() if self.table.item(row, col) is not None else '' for col in
+                          range(self.table.columnCount())]
+            placeholder = ', '.join('?' for _ in row_values)
+            cursor.execute(f'INSERT INTO "{table_name}" VALUES ({placeholder});', row_values)
+
+        # 提交變更
+        conn.commit()
+
+        # 關閉連線
+        conn.close()
+        self.updateTableComboBox()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
+        # 發射信號以更新界面
+        global_signal_manager.databaseUpdated.emit()
+
+    def deleteColumn(self):
+        # 刪除最後一列
+        current_column_count = self.table.columnCount()
+
+        if current_column_count > 0:
+            self.table.removeColumn(current_column_count - 1)
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
+
+    def deleteSelectedColumn(self):
+        # 獲取選中的範圍
+        selected_ranges = self.table.selectedRanges()
+
+        # 如果沒有選中範圍，則直接返回
+        if not selected_ranges:
+            return
+
+        # 獲取要刪除的列的索引列表
+        columns_to_delete = set()
+        for selected_range in selected_ranges:
+            for col in range(selected_range.leftColumn(), selected_range.rightColumn() + 1):
+                columns_to_delete.add(col)
+
+        # 從最大索引開始刪除列，以避免索引變化導致錯誤
+        for col in sorted(columns_to_delete, reverse=True):
+            self.table.removeColumn(col)
+
+        # 更新表格
+        self.table.update()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
+
+    def insertColumnRight(self):
+        selected_indexes = self.table.selectedIndexes()
+        if selected_indexes:
+            # 獲取選中的列數
+            column = selected_indexes[0].column()
+            # 在選中列的右側插入新列
+            self.table.insertColumn(column + 1)
+
+            # 新增對應的表頭
+            new_header_item = QTableWidgetItem(f"Column{column + 1}")
+            self.table.setHorizontalHeaderItem(column + 1, new_header_item)
+
+            # # 更新其餘列的表頭
+            # for i in range(column + 2, self.table.columnCount()):
+            #     existing_header = self.table.horizontalHeaderItem(i)
+            #     if existing_header:
+            #         existing_header.setText(f"Column{i}")
+
+            # 進行表頭編輯
+            self.table.horizontalHeader().edit_line.setGeometry(
+                self.table.horizontalHeader().sectionViewportPosition(column + 1),
+                0,
+                self.table.horizontalHeader().sectionSize(column + 1),
+                self.table.horizontalHeader().height()
+            )
+            self.table.horizontalHeader().edit_line.setText(new_header_item.text())
+            self.table.horizontalHeader().edit_line.show()
+            self.table.horizontalHeader().edit_line.setFocus()
+
+            self.table.selectColumn(column + 1)
+
+            # 加載數據後自動調整所有欄位的寬度以適應內容
+            self.table.resizeColumnsToContents()
     def delete_table(self):
         # 取得現有的資料表
         conn = sqlite3.connect("CIE_spectrum.db")
@@ -225,6 +414,14 @@ class CIE_Spectrum(QWidget):
                                          QMessageBox.No)
 
             if reply == QMessageBox.Yes:
+                # 顯示執行中的訊息框
+                processing_msg = QMessageBox(self)
+                processing_msg.setWindowTitle("執行中,請稍後")
+                processing_msg.setText("正在進行存取操作...")
+
+                # processing_msg.setStandardButtons(QMessageBox.NoButton)
+                processing_msg.show()
+                QApplication.processEvents()  # 使應用程式能夠處理事件並更新介面
                 # 使用者確認後，執行刪除
                 conn = sqlite3.connect("CIE_spectrum.db")
                 cursor = conn.cursor()
@@ -236,6 +433,16 @@ class CIE_Spectrum(QWidget):
                 self.updateTableComboBox()
 
                 QMessageBox.information(self, "成功", f"成功刪除資料表 {table_name}", QMessageBox.Ok)
+                # 在函數的最後發射信號
+                global_signal_manager.databaseUpdated.emit()
+                # 關閉執行中的訊息框
+                processing_msg.close()
+                # 存取成功的彈出視窗
+                QMessageBox.information(self, "存取成功", "表格存取成功！", QMessageBox.Ok)
+
+    def clearForm(self):
+        # 清除整個表格的內容
+        self.table.clearContents()
 
     def exportExcelData(self):
         options = QFileDialog.Options()
@@ -269,6 +476,25 @@ class CIE_Spectrum(QWidget):
 
         # 新增表格欄位
         self.table.insertColumn(current_column_count)
+
+        # 新增對應的表頭
+        new_header_item = QTableWidgetItem(f"Column{current_column_count}")
+        self.table.setHorizontalHeaderItem(current_column_count, new_header_item)
+
+        # 進行表頭編輯
+        self.table.horizontalHeader().edit_line.setGeometry(
+            self.table.horizontalHeader().sectionViewportPosition(current_column_count),
+            0,
+            self.table.horizontalHeader().sectionSize(current_column_count),
+            self.table.horizontalHeader().height()
+        )
+        self.table.horizontalHeader().edit_line.setText(new_header_item.text())
+        self.table.horizontalHeader().edit_line.show()
+        self.table.horizontalHeader().edit_line.setFocus()
+        self.table.selectColumn(current_column_count)
+
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
 
         # # 創建或連接到 SQLite 資料庫
         # db_path = "blu_1e.db"
@@ -359,7 +585,7 @@ class CIE_Spectrum(QWidget):
             return  # 如果表格不存在，直接返回
 
         # 獲取表格的標題
-        cursor.execute("PRAGMA table_info(CIE1931);")
+        cursor.execute("PRAGMA table_info('CIE1931');")
         header_data = cursor.fetchall()
         header_labels = [column[1] for column in header_data]
 
@@ -369,7 +595,7 @@ class CIE_Spectrum(QWidget):
         self.table.setHorizontalHeaderLabels(header_labels)
 
         # 獲取表格數據
-        result = connection.execute("SELECT * FROM CIE1931")
+        result = connection.execute("SELECT * FROM 'CIE1931'")
 
         for row_number, row_data in enumerate(result):
             self.table.insertRow(row_number)
@@ -381,6 +607,7 @@ class CIE_Spectrum(QWidget):
             #print("row data", row_data)
         connection.commit()
         connection.close()
+        self.table.resizeColumnsToContents()
 
     def updateTableComboBox(self):
         # 更新 ComboBox 的選項
@@ -406,8 +633,16 @@ class CIE_Spectrum(QWidget):
         # 當 QComboBox 選擇變更時觸發的函數
         selected_table = self.select_db_table.currentText()
         if selected_table:
+            # 更新表格的列數和標題
+            header_labels = self.getTableHeader(selected_table)
+            self.table.setRowCount(0)  # 先清空表格
+            self.table.setColumnCount(len(header_labels))
+            self.table.setHorizontalHeaderLabels(header_labels)
+
             # 在這裡加入相應的操作，例如從選擇的資料表中擷取資料並更新到 widget_table
+
             self.loadTableData(selected_table)
+        return selected_table
 
     def loadTableData(self, table_name):
         # 在這裡加入載入資料的程式碼，將選擇的資料表的內容更新到 widget_table
@@ -442,3 +677,26 @@ class CIE_Spectrum(QWidget):
             #print("row data", row_data)
         connection.commit()
         connection.close()
+        # 加載數據後自動調整所有欄位的寬度以適應內容
+        self.table.resizeColumnsToContents()
+
+    def getTableHeader(self,table_name):
+        # 获取表头信息
+        connection = sqlite3.connect("CIE_spectrum.db")
+        cursor = connection.cursor()
+
+        # 获取表格的標題
+        cursor.execute(f"PRAGMA table_info('{table_name}');")
+        header_data = cursor.fetchall()
+        header_labels = [column[1] for column in header_data]
+        print("headerlabels-from source",header_labels)
+
+        # 關閉連線
+        connection.close()
+
+        return header_labels
+
+    def get_data_table_name(self):
+        table_name = self.tableSelectionChanged()
+        print("table_name",table_name)
+        self.tablename_signal.emit(table_name)

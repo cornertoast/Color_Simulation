@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout, QPushButton, QLabel
 from PySide6.QtGui import QIcon
+from PySide6.QtCore import QTimer, Qt
 from Color_Simulation import *
 from Light_Source_BLU import *
 from LED_Spectrum import Led_Spectrum
@@ -19,21 +20,55 @@ from Layer3 import Layer3_Spectrum
 from Layer4 import Layer4_Spectrum
 from Layer5 import Layer5_Spectrum
 from Layer6 import Layer6_Spectrum
+from Thickness_evaluation import Thickness_evaluation
+from CS_Pro import CS_evaluation
 
 class Menu(QMainWindow):
     def __init__(self):
         super().__init__()
 
         # 創建主窗口
-        self.setWindowTitle("Color_Simulation_V1.0_Editor:CL")
+        self.setWindowTitle("Color_Simulation_Beta_V1.51_Editor:CL.Tseng")
         self.setGeometry(100, 100, 1300, 900)
 
         # 创建一个选项卡窗口
         self.tab_widget = QTabWidget(self)
 
+        # 圖示
+        icon = QIcon("legend.ico")
+
+        # set圖示
+        self.setWindowIcon(icon)
+
+        self.opacity_timer = QTimer(self)
+        self.opacity_timer.timeout.connect(self.on_opacity_timer)
+        self.opacity_timer.setInterval(700)  # 设置计时器的触发间隔（例如，1000 毫秒）
+
         # Page1
         self.page1 = Color_Simulation()
         self.tab_widget.addTab(self.page1, "Color_Simulation")
+
+        # Page21
+        self.page21 = QWidget()  # 創建一個新的 QWidget 實例
+        self.tab_widget.addTab(self.page21, "Pro_Simulation")
+        self.page21_table = CS_evaluation()
+
+        self.page21_layout = QVBoxLayout()
+        self.page21_layout.addWidget(self.page21_table)
+
+        # 將 page21_layout 設置為 page21 的佈局
+        self.page21.setLayout(self.page21_layout)
+
+        # Page20
+        self.page20 = QWidget()  # 創建一個新的 QWidget 實例
+        self.tab_widget.addTab(self.page20, "Thickness")
+        self.page20_table = Thickness_evaluation()
+
+        self.page20_layout = QVBoxLayout()
+        self.page20_layout.addWidget(self.page20_table)
+
+        # 將 page20_layout 設置為 page20 的佈局
+        self.page20.setLayout(self.page20_layout)
 
 
         # Page2
@@ -74,7 +109,7 @@ class Menu(QMainWindow):
 
         # Page5
         self.page5 = QWidget()  # 創建一個新的 QWidget 實例
-        self.tab_widget.addTab(self.page5, "Cell")
+        self.tab_widget.addTab(self.page5, "Layer1")
         self.page5_table = Cell_Spectrum()
 
         self.page5_layout = QVBoxLayout()
@@ -85,7 +120,7 @@ class Menu(QMainWindow):
 
         # Page6
         self.page6 = QWidget()  # 創建一個新的 QWidget 實例
-        self.tab_widget.addTab(self.page6, "BSITO")
+        self.tab_widget.addTab(self.page6, "Layer2")
         self.page6_table = BSITO_Spectrum()
 
         self.page6_layout = QVBoxLayout()
@@ -239,8 +274,26 @@ class Menu(QMainWindow):
 
 
 
+
+
+
+
         # 添加选项卡窗口到主窗口
         self.setCentralWidget(self.tab_widget)
 
         # Set Background
         self.setStyleSheet("background-color: #F5F5DC;")
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.opacity_timer.start()  # 当按下鼠标左键时启动计时器
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.opacity_timer.stop()  # 当释放鼠标左键时停止计时器
+            self.setWindowOpacity(1.0)  # 恢复窗口透明度
+        super().mouseReleaseEvent(event)
+
+    def on_opacity_timer(self):
+        self.setWindowOpacity(0.3)  # 设置窗口为半透明
